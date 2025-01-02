@@ -6,7 +6,7 @@ local load_schemes = function()
 	local schemes = {}
 	local result = vim.system({ "xcodebuild", "-list", "-json" }, { text = true }):wait()
 	if result.code == 0 then
-		local data = vim.fn.json_decode(result.stdout)
+		local data = vim.json.decode(result.stdout)
 		if data and data["project"]["schemes"] then
 			for _, scheme in ipairs(data["project"]["schemes"]) do
 				table.insert(schemes, scheme)
@@ -26,10 +26,18 @@ local function find_files_with_extension(extension, directory)
 	return files
 end
 
-M.setup = function() end
+local parse_schemes = function(input)
+	local schemes = {}
+	local data = vim.json.decode(input)
+	if data and data["project"]["schemes"] then
+		for _, scheme in ipairs(data["project"]["schemes"]) do
+			table.insert(schemes, scheme)
+		end
+	end
+	return schemes
+end
 
-M.select_schemes = function()
-	local schemes = load_schemes()
+local show_ui = function(schemes)
 	vim.ui.select(schemes, {
 		prompt = "Select a scheme",
 	}, function(selected)
@@ -37,16 +45,33 @@ M.select_schemes = function()
 			local projects = find_files_with_extension("xcodeproj", vim.fn.getcwd())
 			local first_project = projects[1]
 			if first_project then
-				local result = vim.system(
+				vim.system(
 					{ "xcode-build-server", "config", "-scheme", selected, "-project", first_project },
-					{ text = true }
-				):wait()
-				if result.code == 0 then
-					vim.print("Selected scheme " .. selected)
-				else
-					vim.print("Failed to run xcode-build-server " .. result.stderr)
-				end
+					{ text = true },
+					function(result)
+						if result.code == 0 then
+							vim.print("Selected scheme " .. selected)
+						else
+							vim.print("Failed to run xcode-build-server " .. result.stderr)
+						end
+					end
+				)
 			end
+		end
+	end)
+end
+
+M.setup = function() end
+
+M.select_schemes = function()
+	vim.system({ "xcodebuild", "-list", "-json" }, { text = true }, function(result)
+		if result.code == 0 then
+			vim.schedule(function()
+				local schemes = parse_schemes(result.stdout)
+				show_ui(schemes)
+			end)
+		else
+			vim.print("Error running xcodebuild" .. vim.inspect(result))
 		end
 	end)
 end
