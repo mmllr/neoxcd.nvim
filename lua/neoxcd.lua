@@ -1,25 +1,29 @@
 local spinner = require("spinner")
 local a = require("async")
+local util = require("util")
+
 local M = {}
 
 local main_loop = function(f)
 	vim.schedule(f)
 end
 
-local external_cmd = function(cmd, callback)
-	vim.system(cmd, { text = true }, function(result)
-		if result.code ~= 0 then
-			vim.notify(
-				"Failed to run external command" .. vim.inspect(result.stderr),
-				vim.log.levels.ERROR,
-				{ id = "Neoxcd", title = "Neoxcd" }
-			)
+local function current_scheme(callback)
+	util.read_file("build-server.json", function(err, data)
+		if err then
 			callback(nil)
+			return
+		end
+		local decoded = vim.json.decode(data)
+		if decoded and decoded["scheme"] then
+			callback(decoded["scheme"])
 		else
-			callback(result.stdout)
+			callback(nil)
 		end
 	end)
 end
+
+local current_scheme_async = a.wrap(current_scheme)
 
 --- Find files with a specific extension in a directory
 ---@param extension string
@@ -43,7 +47,7 @@ local parse_schemes = function(input)
 end
 
 local load_schemes = function(callback)
-	external_cmd({ "xcodebuild", "-list", "-json" }, callback)
+	util.external_cmd({ "xcodebuild", "-list", "-json" }, callback)
 end
 
 local load_schemes_async = a.wrap(load_schemes)
@@ -56,7 +60,7 @@ local find_xcode_project = function(extension)
 end
 
 local update_xcode_build_config = function(scheme, project, callback)
-	external_cmd({ "xcode-build-server", "config", "-scheme", scheme, "-project", project }, callback)
+	util.external_cmd({ "xcode-build-server", "config", "-scheme", scheme, "-project", project }, callback)
 end
 
 local update_xcode_build_config_async = a.wrap(update_xcode_build_config)
