@@ -1,3 +1,4 @@
+local spinner = require("spinner")
 local M = {}
 
 --- Load schemes from a xcode poject
@@ -64,10 +65,12 @@ end
 M.setup = function() end
 
 M.select_schemes = function()
+	spinner.start()
 	vim.system({ "xcodebuild", "-list", "-json" }, { text = true }, function(result)
 		if result.code == 0 then
 			vim.schedule(function()
 				local schemes = parse_schemes(result.stdout)
+				spinner.stop()
 				show_ui(schemes)
 			end)
 		else
