@@ -1,20 +1,20 @@
 local spinner = require("spinner")
+local a = require("async")
 local M = {}
 
---- Load schemes from a xcode poject
----@return string[]
-local load_schemes = function()
-	local schemes = {}
-	local result = vim.system({ "xcodebuild", "-list", "-json" }, { text = true }):wait()
-	if result.code == 0 then
-		local data = vim.json.decode(result.stdout)
-		if data and data["project"]["schemes"] then
-			for _, scheme in ipairs(data["project"]["schemes"]) do
-				table.insert(schemes, scheme)
-			end
+local main_loop = function(f)
+	vim.schedule(f)
+end
+
+local external_cmd = function(cmd, callback)
+	vim.system(cmd, { text = true }, function(result)
+		if result.code ~= 0 then
+			vim.print("Failed to run xcode-build-server " .. result.stderr)
+			callback(nil)
+		else
+			callback(result.stdout)
 		end
-	end
-	return schemes
+	end)
 end
 
 --- Find files with a specific extension in a directory
@@ -38,45 +38,62 @@ local parse_schemes = function(input)
 	return schemes
 end
 
-local show_ui = function(schemes)
+local load_schemes = function(callback)
+	external_cmd({ "xcodebuild", "-list", "-json" }, callback)
+end
+
+local load_schemes_async = a.wrap(load_schemes)
+
+--- Find the xcode project in the current directory
+---@param extension string
+local find_xcode_project = function(extension)
+	local projects = find_files_with_extension(extension, vim.fn.getcwd())
+	return projects[1]
+end
+
+local update_xcode_build_config = function(scheme, project, callback)
+	external_cmd({ "xcode-build-server", "config", "-scheme", scheme, "-project", project }, callback)
+end
+
+local update_xcode_build_config_async = a.wrap(update_xcode_build_config)
+
+local show_ui = function(schemes, callback)
 	vim.ui.select(schemes, {
 		prompt = "Select a scheme",
-	}, function(selected)
-		if selected then
-			local projects = find_files_with_extension("xcodeproj", vim.fn.getcwd())
-			local first_project = projects[1]
-			if first_project then
-				vim.system(
-					{ "xcode-build-server", "config", "-scheme", selected, "-project", first_project },
-					{ text = true },
-					function(result)
-						if result.code == 0 then
-							vim.print("Selected scheme " .. selected)
-						else
-							vim.print("Failed to run xcode-build-server " .. result.stderr)
-						end
-					end
-				)
-			end
-		end
-	end)
+	}, callback)
 end
+
+local show_ui_async = a.wrap(show_ui)
 
 M.setup = function() end
 
 M.select_schemes = function()
 	spinner.start("Loading schemes...")
-	vim.system({ "xcodebuild", "-list", "-json" }, { text = true }, function(result)
-		if result.code == 0 then
-			vim.schedule(function()
-				local schemes = parse_schemes(result.stdout)
-				spinner.stop()
-				show_ui(schemes)
-			end)
+	a.sync(function()
+		local output = a.wait(load_schemes_async())
+		a.wait(main_loop)
+		spinner.stop()
+		local schemes = {}
+		if output == nil then
+			vim.cmd("echo 'No schemes found'")
+			return
 		else
-			vim.print("Error running xcodebuild" .. vim.inspect(result))
+			schemes = parse_schemes(output)
 		end
-	end)
+		local selection = a.wait(show_ui_async(schemes))
+		if selection then
+			spinner.start("Updating xcode-build-server config...")
+			local project = find_xcode_project("xcodeproj")
+			local success = a.wait(update_xcode_build_config_async(selection, project))
+			a.wait(main_loop)
+			spinner.stop()
+			if success then
+				vim.cmd("echo 'Selected scheme: " .. selection .. "'")
+			else
+				vim.cmd("echo 'Failed to select scheme: " .. selection .. "'")
+			end
+		end
+	end)()
 end
 
 return M
