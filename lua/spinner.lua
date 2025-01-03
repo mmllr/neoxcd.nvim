@@ -3,17 +3,21 @@ local M = {}
 local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
 local spinner_index = 1
 local spinner_active = false
+local message = ""
 
 local function update_spinner()
 	if not spinner_active then
+		vim.cmd("echo ''") -- Clear the command line
 		return
 	end
 	spinner_index = (spinner_index % #spinner_frames) + 1
-	vim.api.nvim_command("redrawstatus")
+	vim.cmd("echohl ModeMsg | echon '" .. spinner_frames[spinner_index] .. " " .. message .. " ' | echohl None")
 	vim.defer_fn(update_spinner, 100)
 end
-
-function M.start()
+--- Start the spinner
+---@param text string?
+function M.start(text)
+	message = text or ""
 	if spinner_active then
 		return
 	end
@@ -23,7 +27,7 @@ end
 
 function M.stop()
 	spinner_active = false
-	vim.api.nvim_command("redrawstatus")
+	vim.cmd("echo ''") -- Clear the command line
 end
 
 function M.statusline()

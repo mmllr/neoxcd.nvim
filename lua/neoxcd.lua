@@ -65,7 +65,7 @@ end
 M.setup = function() end
 
 M.select_schemes = function()
-	spinner.start()
+	spinner.start("Loading schemes...")
 	vim.system({ "xcodebuild", "-list", "-json" }, { text = true }, function(result)
 		if result.code == 0 then
 			vim.schedule(function()
