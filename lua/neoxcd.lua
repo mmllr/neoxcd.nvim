@@ -9,7 +9,11 @@ end
 local external_cmd = function(cmd, callback)
 	vim.system(cmd, { text = true }, function(result)
 		if result.code ~= 0 then
-			vim.notify("Failed to run xcode-build-server", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+			vim.notify(
+				"Failed to run external command" .. vim.inspect(result.stderr),
+				vim.log.levels.ERROR,
+				{ id = "Neoxcd", title = "Neoxcd" }
+			)
 			callback(nil)
 		else
 			callback(result.stdout)
