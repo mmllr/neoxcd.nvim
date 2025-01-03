@@ -1,5 +1,6 @@
 local spinner = require("spinner")
 local a = require("async")
+local log = require("log")
 local M = {}
 
 local main_loop = function(f)
@@ -9,7 +10,7 @@ end
 local external_cmd = function(cmd, callback)
 	vim.system(cmd, { text = true }, function(result)
 		if result.code ~= 0 then
-			vim.print("Failed to run xcode-build-server " .. result.stderr)
+			log.message("Failed to run xcode-build-server", result.stderr)
 			callback(nil)
 		else
 			callback(result.stdout)
@@ -75,7 +76,7 @@ M.select_schemes = function()
 		spinner.stop()
 		local schemes = {}
 		if output == nil then
-			vim.cmd("echo 'No schemes found'")
+			log.message("No schemes found")
 			return
 		else
 			schemes = parse_schemes(output)
@@ -88,9 +89,9 @@ M.select_schemes = function()
 			a.wait(main_loop)
 			spinner.stop()
 			if success then
-				vim.cmd("echo 'Selected scheme: " .. selection .. "'")
+				log.message("Selected scheme:", selection)
 			else
-				vim.cmd("echo 'Failed to select scheme: " .. selection .. "'")
+				log.message("Failed to select scheme:", selection)
 			end
 		end
 	end)()

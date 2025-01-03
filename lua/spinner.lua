@@ -1,5 +1,6 @@
 local M = {}
 
+local log = require("log")
 local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
 local spinner_index = 1
 local spinner_active = false
@@ -11,9 +12,10 @@ local function update_spinner()
 		return
 	end
 	spinner_index = (spinner_index % #spinner_frames) + 1
-	vim.cmd("echohl ModeMsg | echon '" .. spinner_frames[spinner_index] .. " " .. message .. " ' | echohl None")
+	log.log_line(spinner_frames[spinner_index], message)
 	vim.defer_fn(update_spinner, 100)
 end
+
 --- Start the spinner
 ---@param text string?
 function M.start(text)
@@ -27,7 +29,7 @@ end
 
 function M.stop()
 	spinner_active = false
-	vim.cmd("echo ''") -- Clear the command line
+	log.message("")
 end
 
 function M.statusline()

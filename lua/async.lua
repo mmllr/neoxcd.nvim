@@ -1,4 +1,5 @@
 -- https://github.com/ms-jpq/lua-async-await
+local M = {}
 local co = coroutine
 local unpack = table.unpack or unpack
 
