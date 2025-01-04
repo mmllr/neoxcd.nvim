@@ -25,16 +25,6 @@ end
 
 local current_scheme_async = a.wrap(current_scheme)
 
---- Find files with a specific extension in a directory
----@param extension string
----@param directory string
----@return string[]
-local function find_files_with_extension(extension, directory)
-	local pattern = directory .. "/*." .. extension
-	local files = vim.fn.glob(pattern, false, true) -- Get a list of files
-	return files
-end
-
 local parse_schemes = function(input)
 	local schemes = {}
 	local data = vim.json.decode(input)
@@ -55,7 +45,7 @@ local load_schemes_async = a.wrap(load_schemes)
 --- Find the xcode project in the current directory
 ---@param extension string
 local find_xcode_project = function(extension)
-	local projects = find_files_with_extension(extension, vim.fn.getcwd())
+	local projects = util.find_files_with_extension(extension, vim.fn.getcwd())
 	return projects[1]
 end
 

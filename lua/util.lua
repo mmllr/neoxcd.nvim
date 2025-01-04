@@ -50,4 +50,14 @@ function M.external_cmd(cmd, callback)
 	end)
 end
 
+--- Find files with a specific extension in a directory
+---@param extension string
+---@param directory string
+---@return string[]
+function M.find_files_with_extension(extension, directory)
+	local pattern = directory .. "/*." .. extension
+	local files = vim.fn.glob(pattern, false, true) -- Get a list of files
+	return files
+end
+
 return M
