@@ -25,7 +25,7 @@ end
 
 local current_scheme_async = a.wrap(current_scheme)
 
-local parse_schemes = function(input)
+local function parse_schemes(input)
 	local schemes = {}
 	local data = vim.json.decode(input)
 	if data and data["project"]["schemes"] then
@@ -44,18 +44,18 @@ local load_schemes_async = a.wrap(load_schemes)
 
 --- Find the xcode project in the current directory
 ---@param extension string
-local find_xcode_project = function(extension)
+local function find_xcode_project(extension)
 	local projects = util.find_files_with_extension(extension, vim.fn.getcwd())
 	return projects[1]
 end
 
-local update_xcode_build_config = function(scheme, project, callback)
+local function update_xcode_build_config(scheme, project, callback)
 	util.external_cmd({ "xcode-build-server", "config", "-scheme", scheme, "-project", project }, callback)
 end
 
 local update_xcode_build_config_async = a.wrap(update_xcode_build_config)
 
-local show_ui = function(schemes, callback)
+local function show_ui(schemes, callback)
 	vim.ui.select(schemes, {
 		prompt = "Select a scheme",
 	}, callback)
@@ -63,7 +63,7 @@ end
 
 local show_ui_async = a.wrap(show_ui)
 
-M.setup = function() end
+function M.setup() end
 
 M.select_schemes = function()
 	spinner.start("Loading schemes...")
