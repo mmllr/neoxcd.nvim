@@ -50,6 +50,7 @@ local function parse_destinations(text)
 	return destinations
 end
 
+--- Format a destination for display in the UI
 ---@param destination Destination
 ---@return string
 local function format_destination(destination)
