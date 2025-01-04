@@ -4,6 +4,68 @@ local util = require("util")
 
 local M = {}
 
+---@class Destination
+---@field platform string
+---@field arch? string
+---@field id string
+---@field name string
+---@field OS? string
+
+--- Parse the output of `xcodebuild -showdestinations` into a table of destinations
+---@param text string
+---@return Destination[]
+local function parse_destinations(text)
+	local destinations = {}
+
+	-- Pattern to match each destination block
+	for block in text:gmatch("{(.-)}") do
+		local destination = {}
+
+		-- Extract key-value pairs within the block
+		for key, value in block:gmatch("(%w+):([^,]+)") do
+			-- Remove any surrounding spaces or brackets
+			key = key:match("^%s*(.-)%s*$")
+			value = value:match("^%s*(.-)%s*$")
+
+			-- Handle special cases for lists and numbers
+			if value:match("^%[.*%]$") then
+				-- Convert lists like [iPad,iPhone] into Lua tables
+				local list = {}
+				for item in value:gmatch("[^%[%],]+") do
+					table.insert(list, item)
+				end
+				value = list
+			elseif tonumber(value) then
+				value = tonumber(value) -- Convert numeric strings to numbers
+			elseif value == "nil" then
+				value = nil -- Convert "nil" strings to actual nil
+			end
+
+			destination[key] = value
+		end
+
+		table.insert(destinations, destination)
+	end
+
+	return destinations
+end
+
+---@param destination Destination
+---@return string
+local function format_destination(destination)
+	local parts = { destination.name }
+	if destination.platform then
+		table.insert(parts, destination.platform)
+	end
+	if destination.arch then
+		table.insert(parts, destination.arch)
+	end
+	if destination.OS then
+		table.insert(parts, destination.OS)
+	end
+	return table.concat(parts, " ")
+end
+
 local main_loop = function(f)
 	vim.schedule(f)
 end
@@ -57,16 +119,23 @@ end
 
 local update_xcode_build_config_async = a.wrap(update_xcode_build_config)
 
-local function show_ui(schemes, callback)
-	vim.ui.select(schemes, {
-		prompt = "Select a scheme",
-	}, callback)
+local function show_ui(schemes, opts, callback)
+	vim.ui.select(schemes, opts, callback)
 end
 
 local show_ui_async = a.wrap(show_ui)
 
 local function show_destinations(scheme, project, callback)
-	util.external_cmd({ "xcodebuild", "-showdestinations", "-scheme", scheme, "-project", project, "-quiet" }, callback)
+	util.external_cmd(
+		{ "xcodebuild", "-showdestinations", "-scheme", scheme, "-project", project, "-quiet" },
+		function(result)
+			if result then
+				callback(parse_destinations(result))
+			else
+				callback(nil)
+			end
+		end
+	)
 end
 
 local show_destinations_async = a.wrap(show_destinations)
@@ -86,7 +155,9 @@ M.select_schemes = a.sync(function()
 	else
 		schemes = parse_schemes(output)
 	end
-	local selection = a.wait(show_ui_async(schemes))
+	local selection = a.wait(show_ui_async(schemes, {
+		prompt = "Select a scheme",
+	}))
 	if selection then
 		spinner.start("Updating xcode-build-server config...")
 		local project = find_xcode_project("xcodeproj")
@@ -114,8 +185,15 @@ M.select_destination = a.sync(function()
 		local project = find_xcode_project("xcodeproj")
 		local destinations = a.wait(show_destinations_async(scheme, project))
 		spinner.stop()
-		if destinations then
-			vim.notify(destinations, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+		if #destinations > 0 and destinations then
+			a.wait(main_loop)
+			local selection = a.wait(show_ui_async(destinations, {
+				prompt = "Select a destination",
+				format_item = format_destination,
+			}))
+			vim.notify(format_destination(selection), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+		else
+			vim.notify("No destinations found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 		end
 	else
 		vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
