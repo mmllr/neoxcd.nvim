@@ -78,6 +78,19 @@ local function format_destination(destination)
 	return table.concat(parts, " ")
 end
 
+--- Format a destination for use in a build command
+---@param destination Destination
+local function format_destination_for_build(destination)
+	local parts = { destination.platform }
+	if destination.id then
+		table.insert(parts, destination.id)
+	end
+	if destination.arch then
+		table.insert(parts, destination.arch)
+	end
+	return '"' .. table.concat(parts, ",") .. '"'
+end
+
 local main_loop = function(f)
 	vim.schedule(f)
 end
