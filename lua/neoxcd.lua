@@ -215,4 +215,18 @@ M.select_destination = a.sync(function()
 	end
 end)
 
+--- Cleans the project
+M.clean = a.sync(function()
+	spinner.start("Cleaning project...")
+	local project = find_xcode_project("xcodeproj")
+	local result = a.wait(a.wrap(util.external_cmd)({ "xcodebuild", "clean", "-project", project }))
+	a.wait(main_loop)
+	spinner.stop()
+	if result.code == 0 then
+		vim.notify("Project cleaned", vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+	else
+		vim.notify("Failed to clean project", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+	end
+end)
+
 return M
