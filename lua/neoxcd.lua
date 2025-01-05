@@ -11,6 +11,17 @@ local M = {}
 ---@field name string
 ---@field OS? string
 
+--- Returns the output or nil if the command failed
+---@param result vim.SystemCompleted
+---@return string|nil
+local function output_or_nil(result)
+	if result.code == 0 then
+		return result.stdout
+	else
+		return nil
+	end
+end
+
 --- Parse the output of `xcodebuild -showdestinations` into a table of destinations
 ---@param text string
 ---@return Destination[]
@@ -102,7 +113,9 @@ local function parse_schemes(input)
 end
 
 local load_schemes = function(callback)
-	util.external_cmd({ "xcodebuild", "-list", "-json" }, callback)
+	util.external_cmd({ "xcodebuild", "-list", "-json" }, function(result)
+		callback(output_or_nil(result))
+	end)
 end
 
 local load_schemes_async = a.wrap(load_schemes)
@@ -130,8 +143,9 @@ local function show_destinations(scheme, project, callback)
 	util.external_cmd(
 		{ "xcodebuild", "-showdestinations", "-scheme", scheme, "-project", project, "-quiet" },
 		function(result)
-			if result then
-				callback(parse_destinations(result))
+			local output = output_or_nil(result)
+			if output then
+				callback(parse_destinations(output))
 			else
 				callback(nil)
 			end
