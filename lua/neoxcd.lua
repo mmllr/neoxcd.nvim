@@ -256,6 +256,7 @@ M.build = a.sync(function()
 		)
 		return
 	end
+	local start_time = os.time()
 	spinner.start("Building " .. scheme .. "...")
 	--- TODO: query available configurations instead of hardcoding "Debug"
 	local cmd = {
@@ -274,7 +275,9 @@ M.build = a.sync(function()
 	a.wait(main_loop)
 	spinner.stop()
 	if result.code == 0 then
-		vim.notify("Build succeeded", vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+		local end_time = os.time()
+		local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
+		vim.notify(msg, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 	else
 		vim.notify("Build failed" .. result.stderr, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 	end
