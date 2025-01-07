@@ -270,7 +270,6 @@ M.build = a.sync(function()
 		"-project",
 		project,
 	}
-	vim.notify(table.concat(cmd, " "), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 	local result = a.wait(a.wrap(util.external_cmd)(cmd))
 	a.wait(main_loop)
 	spinner.stop()
