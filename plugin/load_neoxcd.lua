@@ -10,3 +10,7 @@ end, {})
 vim.api.nvim_create_user_command("NeoxcdClean", function()
 	neoxcd.clean()
 end, {})
+
+vim.api.nvim_create_user_command("NeoxcdBuild", function()
+	neoxcd.build()
+end, {})

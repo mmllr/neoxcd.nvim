@@ -1,6 +1,7 @@
 local spinner = require("spinner")
 local a = require("async")
 local util = require("util")
+local destination_mapping = {}
 
 local M = {}
 
@@ -81,14 +82,14 @@ end
 --- Format a destination for use in a build command
 ---@param destination Destination
 local function format_destination_for_build(destination)
-	local parts = { destination.platform }
-	if destination.id then
-		table.insert(parts, destination.id)
+	local keys = { "platform", "arch", "id" }
+	local parts = {}
+	for k, v in pairs(destination) do
+		if vim.tbl_contains(keys, k) then
+			table.insert(parts, k .. "=" .. v)
+		end
 	end
-	if destination.arch then
-		table.insert(parts, destination.arch)
-	end
-	return '"' .. table.concat(parts, ",") .. '"'
+	return table.concat(parts, ",")
 end
 
 local main_loop = function(f)
@@ -220,6 +221,7 @@ M.select_destination = a.sync(function()
 				format_item = format_destination,
 			}))
 			vim.notify(format_destination(selection), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+			destination_mapping[scheme] = selection
 		else
 			vim.notify("No destinations found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 		end
@@ -239,6 +241,43 @@ M.clean = a.sync(function()
 		vim.notify("Project cleaned", vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 	else
 		vim.notify("Failed to clean project", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+	end
+end)
+
+M.build = a.sync(function()
+	local project = find_xcode_project("xcodeproj")
+	local scheme = a.wait(current_scheme_async(vim.fn.getcwd()))
+	a.wait(main_loop)
+	if destination_mapping[scheme] == nil then
+		vim.notify(
+			"No destination selected, use NeoxcdSelectDestination to choose a destination",
+			vim.log.levels.ERROR,
+			{ id = "Neoxcd", title = "Neoxcd" }
+		)
+		return
+	end
+	spinner.start("Building " .. scheme .. "...")
+	--- TODO: query available configurations instead of hardcoding "Debug"
+	local cmd = {
+		"xcodebuild",
+		"build",
+		"-scheme",
+		scheme,
+		"-destination",
+		format_destination_for_build(destination_mapping[scheme]),
+		"-configuration",
+		"Debug",
+		"-project",
+		project,
+	}
+	vim.notify(table.concat(cmd, " "), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+	local result = a.wait(a.wrap(util.external_cmd)(cmd))
+	a.wait(main_loop)
+	spinner.stop()
+	if result.code == 0 then
+		vim.notify("Build succeeded", vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+	else
+		vim.notify("Build failed" .. result.stderr, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 	end
 end)
 
