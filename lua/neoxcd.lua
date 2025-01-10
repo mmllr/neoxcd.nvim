@@ -233,8 +233,14 @@ end)
 --- Cleans the project
 M.clean = a.sync(function()
 	spinner.start("Cleaning project...")
+	local scheme = a.wait(current_scheme_async(vim.fn.getcwd()))
+	a.wait(main_loop)
+	if scheme == nil then
+		vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+		return
+	end
 	local project = find_xcode_project("xcodeproj")
-	local result = a.wait(a.wrap(util.external_cmd)({ "xcodebuild", "clean", "-project", project }))
+	local result = a.wait(a.wrap(util.external_cmd)({ "xcodebuild", "clean", "-project", project, "-scheme", scheme }))
 	a.wait(main_loop)
 	spinner.stop()
 	if result.code == 0 then
