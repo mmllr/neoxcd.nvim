@@ -1,36 +1,5 @@
+local nio = require("nio")
 local M = {}
-local uv = vim.loop
-
---- Read a file
----@param filepath string
----@param callback fun(err: any|nil, data: any|nil)
-function M.read_file(filepath, callback)
-	uv.fs_open(filepath, "r", 438, function(err, fd)
-		if err then
-			callback(err, nil)
-			return
-		end
-		uv.fs_fstat(fd, function(err, stat)
-			if err then
-				callback(err, nil)
-				return
-			end
-			uv.fs_read(fd, stat.size, 0, function(err, data)
-				if err then
-					callback(err, nil)
-					return
-				end
-				uv.fs_close(fd, function(err)
-					if err then
-						callback(err, nil)
-						return
-					end
-					callback(nil, data)
-				end)
-			end)
-		end)
-	end)
-end
 
 --- Run an external command
 ---@param cmd string[]
@@ -45,7 +14,7 @@ end
 ---@return string[]
 function M.find_files_with_extension(extension, directory)
 	local pattern = directory .. "/*." .. extension
-	local files = vim.fn.glob(pattern, false, true) -- Get a list of files
+	local files = nio.fn.glob(pattern, false, true) -- Get a list of files
 	return files
 end
 
@@ -62,19 +31,6 @@ function M.concat(lhs, rhs)
 		table.insert(result, v)
 	end
 	return result
-end
-
---- check if a list contains a value
----@param list table
----@param value any
----@return boolean
-function M.contains(list, value)
-	for _, v in ipairs(list) do
-		if v == value then
-			return true
-		end
-	end
-	return false
 end
 
 return M

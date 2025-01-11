@@ -95,23 +95,24 @@ local function format_destination_for_build(destination)
 end
 
 ---@param directory string
----@param callback fun(scheme: string|nil)
-local function current_scheme(directory, callback)
-	util.read_file(directory .. "/buildServer.json", function(err, data)
-		if err then
-			callback(nil)
-			return
-		end
-		local decoded = vim.json.decode(data)
-		if decoded and decoded["scheme"] then
-			callback(decoded["scheme"])
-		else
-			callback(nil)
-		end
-	end)
+---@return string?
+local function current_scheme(directory)
+	local file = nio.file.open(directory .. "/buildServer.json")
+	if not file then
+		return nil
+	end
+	local content, error = file.read(nil, 0)
+	file.close()
+	if content == nil or error then
+		return nil
+	end
+	local decoded = vim.json.decode(content)
+	if decoded and decoded["scheme"] then
+		return decoded["scheme"]
+	else
+		return nil
+	end
 end
-
-local current_scheme_async = nio.wrap(current_scheme, 2)
 
 --- Parse the output of `xcodebuild -list -json` into a table of schemes
 ---@param input string
@@ -130,7 +131,6 @@ end
 
 local load_schemes = function(opts, callback)
 	local cmd = { "xcodebuild", "-list", "-json" }
-	vim.notify("opts: " .. vim.inspect(opts), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 	util.external_cmd(util.concat(cmd, opts), function(result)
 		callback(output_or_nil(result))
 	end)
@@ -142,15 +142,15 @@ local load_schemes_async = nio.wrap(load_schemes, 2)
 --- When no result is found, return empty table (Swift package projects do not have a workspace or project file)
 ---@return table?
 local function find_build_options()
-	local workspace = util.find_files_with_extension("xcworkspace", vim.fn.getcwd())
+	local workspace = util.find_files_with_extension("xcworkspace", nio.fn.getcwd())
 	if #workspace > 0 then
 		return { "-workspace", workspace[1] }
 	end
-	local project = util.find_files_with_extension("xcodeproj", vim.fn.getcwd())
+	local project = util.find_files_with_extension("xcodeproj", nio.fn.getcwd())
 	if #project > 0 then
 		return { "-project", project[1] }
 	end
-	local files = vim.fn.glob(vim.fn.getcwd() .. "/Package.swift", false, true) -- Get a list of files
+	local files = nio.fn.glob(nio.fn.getcwd() .. "/Package.swift", false, true) -- Get a list of files
 	if files and #files > 0 then
 		return {}
 	end
@@ -189,7 +189,7 @@ local show_destinations_async = nio.wrap(show_destinations, 3)
 local run_external_cmd_async = nio.wrap(util.external_cmd, 2)
 
 M.setup = nio.create(function()
-	local scheme = current_scheme_async(vim.fn.getcwd())
+	local scheme = current_scheme(nio.fn.getcwd())
 	if scheme then
 		M.selected_scheme = scheme
 	end
@@ -208,7 +208,7 @@ M.select_schemes = nio.create(function()
 		return
 	else
 		local key
-		if util.contains(opts, "-project") then
+		if vim.list_contains(opts, "-project") then
 			key = "project"
 		else
 			key = "workspace"
@@ -243,7 +243,7 @@ end)
 
 --- Selects a destination for the current scheme
 M.select_destination = nio.create(function()
-	local scheme = M.selected_scheme or current_scheme_async(nio.fn.getcwd())
+	local scheme = M.selected_scheme or current_scheme(nio.fn.getcwd())
 	nio.scheduler()
 	if scheme then
 		spinner.start("Loading destinations for scheme: " .. scheme .. "...")
@@ -268,14 +268,28 @@ end)
 --- Cleans the project
 M.clean = nio.create(function()
 	spinner.start("Cleaning project...")
-	local scheme = M.select_scheme or current_scheme_async(nio.fn.getcwd())
+	local scheme = M.select_scheme or current_scheme(nio.fn.getcwd())
 	nio.scheduler()
 	if scheme == nil then
 		vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 		return
 	end
-	local opts = find_build_options()
-	local result = run_external_cmd_async(util.cmd_concat({ "xcodebuild", "clean", "-scheme", scheme }, opts or {}))
+	if destination_mapping[scheme] == nil then
+		vim.notify(
+			"No destination selected, use NeoxcdSelectDestination to choose a destination",
+			vim.log.levels.ERROR,
+			{ id = "Neoxcd", title = "Neoxcd" }
+		)
+		return
+	end
+	local result = run_external_cmd_async({
+		"xcodebuild",
+		"clean",
+		"-scheme",
+		scheme,
+		"-destination",
+		format_destination_for_build(destination_mapping[scheme]),
+	})
 	nio.scheduler()
 	spinner.stop()
 	if result.code == 0 then
@@ -291,7 +305,7 @@ M.build = nio.create(function()
 		vim.notify("No Xcode project or workspace found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 		return
 	end
-	local scheme = M.selected_scheme or current_scheme_async(nio.fn.getcwd())
+	local scheme = M.selected_scheme or current_scheme(nio.fn.getcwd())
 	nio.scheduler()
 	if destination_mapping[scheme] == nil then
 		vim.notify(
