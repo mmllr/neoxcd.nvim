@@ -1,13 +1,6 @@
 local nio = require("nio")
 local M = {}
 
---- Run an external command
----@param cmd string[]
----@param callback fun(result: vim.SystemCompleted)
-function M.external_cmd(cmd, callback)
-	vim.system(cmd, { text = true }, callback)
-end
-
 --- Find files with a specific extension in a directory
 ---@param extension string
 ---@param directory string

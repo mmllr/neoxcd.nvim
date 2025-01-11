@@ -14,17 +14,6 @@ local M = {
 ---@field name string
 ---@field OS? string
 
---- Returns the output or nil if the command failed
----@param result vim.SystemCompleted
----@return string|nil
-local function output_or_nil(result)
-	if result.code == 0 then
-		return result.stdout
-	else
-		return nil
-	end
-end
-
 --- Parse the output of `xcodebuild -showdestinations` into a table of destinations
 ---@param text string
 ---@return Destination[]
@@ -129,14 +118,18 @@ local function parse_schemes(input, parent_key)
 	return schemes
 end
 
-local load_schemes = function(opts, callback)
-	local cmd = { "xcodebuild", "-list", "-json" }
-	util.external_cmd(util.concat(cmd, opts), function(result)
-		callback(output_or_nil(result))
-	end)
+local load_schemes = function(opts)
+	local build = nio.process.run({
+		cmd = "xcodebuild",
+		args = util.concat({ "-list", "-json" }, opts or {}),
+	})
+	if build == nil then
+		return nil
+	end
+	local output = build.stdout.read()
+	build.close()
+	return output
 end
-
-local load_schemes_async = nio.wrap(load_schemes, 2)
 
 --- Find the Xcode workspace or project file in the current directory
 --- When no result is found, return empty table (Swift package projects do not have a workspace or project file)
@@ -157,12 +150,16 @@ local function find_build_options()
 	return nil
 end
 
-local function update_xcode_build_config(scheme, opts, callback)
-	local cmd = { "xcode-build-server", "config", "-scheme", scheme }
-	util.external_cmd(util.concat(cmd, opts or {}), callback)
+local function update_xcode_build_config(scheme, opts)
+	local build = nio.process.run({
+		cmd = "xcode-build-server",
+		args = util.concat({ "config", "-scheme", scheme }, opts or {}),
+	})
+	if build == nil then
+		return false
+	end
+	return build.result(true) == 0
 end
-
-local update_xcode_build_config_async = nio.wrap(update_xcode_build_config, 3)
 
 local function show_ui(schemes, opts, callback)
 	vim.ui.select(schemes, opts, callback)
@@ -170,23 +167,28 @@ end
 
 local select_async = nio.wrap(show_ui, 3)
 
-local function show_destinations(scheme, opts, callback)
-	util.external_cmd(
-		util.concat({ "xcodebuild", "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}),
-		function(result)
-			local output = output_or_nil(result)
-			if output then
-				callback(parse_destinations(output))
-			else
-				callback(nil)
-			end
-		end
-	)
+local function run_external_cmd(cmd, args)
+	local result = nio.process.run({
+		cmd = cmd,
+		args = args,
+	})
+	if result == nil then
+		return nil
+	end
+	local output = result.stdout.read()
+	result.close()
+	return output
 end
 
-local show_destinations_async = nio.wrap(show_destinations, 3)
-
-local run_external_cmd_async = nio.wrap(util.external_cmd, 2)
+local function show_destinations(scheme, opts)
+	local output =
+		run_external_cmd("xcodebuild", util.concat({ "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}))
+	if output then
+		return parse_destinations(output)
+	else
+		return nil
+	end
+end
 
 M.setup = nio.create(function()
 	local scheme = current_scheme(nio.fn.getcwd())
@@ -199,7 +201,7 @@ end)
 M.select_schemes = nio.create(function()
 	spinner.start("Loading schemes...")
 	local opts = find_build_options()
-	local output = load_schemes_async(opts)
+	local output = load_schemes(opts)
 	nio.scheduler()
 	spinner.stop()
 	local schemes = {}
@@ -224,7 +226,7 @@ M.select_schemes = nio.create(function()
 		if #opts == 0 then
 			success = true
 		else
-			success = update_xcode_build_config_async(selection, opts)
+			success = update_xcode_build_config(selection, opts)
 		end
 		M.selected_scheme = selection
 		nio.scheduler()
@@ -248,7 +250,7 @@ M.select_destination = nio.create(function()
 	if scheme then
 		spinner.start("Loading destinations for scheme: " .. scheme .. "...")
 		local opts = find_build_options()
-		local destinations = show_destinations_async(scheme, opts)
+		local destinations = show_destinations(scheme, opts)
 		spinner.stop()
 		if #destinations > 0 and destinations then
 			nio.scheduler()
@@ -282,8 +284,7 @@ M.clean = nio.create(function()
 		)
 		return
 	end
-	local result = run_external_cmd_async({
-		"xcodebuild",
+	local result = run_external_cmd("xcodebuild", {
 		"clean",
 		"-scheme",
 		scheme,
@@ -292,7 +293,7 @@ M.clean = nio.create(function()
 	})
 	nio.scheduler()
 	spinner.stop()
-	if result.code == 0 then
+	if result ~= nil then
 		vim.notify("Project cleaned", vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 	else
 		vim.notify("Failed to clean project", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
@@ -319,7 +320,6 @@ M.build = nio.create(function()
 	spinner.start("Building " .. scheme .. "...")
 	--- TODO: query available configurations instead of hardcoding "Debug"
 	local cmd = {
-		"xcodebuild",
 		"build",
 		"-scheme",
 		scheme,
@@ -328,15 +328,15 @@ M.build = nio.create(function()
 		"-configuration",
 		"Debug",
 	}
-	local result = run_external_cmd_async(util.concat(cmd, opts))
+	local result = run_external_cmd("xcodebuild", util.concat(cmd, opts))
 	nio.scheduler()
 	spinner.stop()
-	if result.code == 0 then
+	if result ~= nil then
 		local end_time = os.time()
 		local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
 		vim.notify(msg, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 	else
-		vim.notify("Build failed" .. result.stderr, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+		vim.notify("Build failed", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 	end
 end)
 
