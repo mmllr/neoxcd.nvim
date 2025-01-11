@@ -132,8 +132,9 @@ local function parse_schemes(input, parent_key)
 	return schemes
 end
 
-local load_schemes = function(callback)
-	util.external_cmd({ "xcodebuild", "-list", "-json" }, function(result)
+local load_schemes = function(opts, callback)
+	local cmd = { "xcodebuild", "-list", "-json" }
+	util.external_cmd(util.concat(cmd, opts), function(result)
 		callback(output_or_nil(result))
 	end)
 end
@@ -160,8 +161,8 @@ local function find_build_options()
 end
 
 local function update_xcode_build_config(scheme, opts, callback)
-	local cmd = { "xcode-build-server", "config", "-scheme", scheme, opts }
-	util.external_cmd(vim.tbl_extend("keep", cmd, opts or {}), callback)
+	local cmd = { "xcode-build-server", "config", "-scheme", scheme }
+	util.external_cmd(util.concat(cmd, opts or {}), callback)
 end
 
 local update_xcode_build_config_async = a.wrap(update_xcode_build_config)
@@ -174,7 +175,7 @@ local show_ui_async = a.wrap(show_ui)
 
 local function show_destinations(scheme, opts, callback)
 	util.external_cmd(
-		vim.tbl_extend("keep", { "xcodebuild", "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}),
+		util.concat({ "xcodebuild", "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}),
 		function(result)
 			local output = output_or_nil(result)
 			if output then
@@ -200,11 +201,11 @@ end
 --- Shows a list of schemes and updates the xcode-build-server config
 M.select_schemes = a.sync(function()
 	spinner.start("Loading schemes...")
-	local output = a.wait(load_schemes_async())
+	local opts = find_build_options()
+	local output = a.wait(load_schemes_async(opts))
 	a.wait(main_loop)
 	spinner.stop()
 	local schemes = {}
-	local opts = find_build_options()
 	if output == nil or opts == nil then
 		vim.notify("No schemes found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 		return
@@ -258,7 +259,6 @@ M.select_destination = a.sync(function()
 				prompt = "Select a destination",
 				format_item = format_destination,
 			}))
-			vim.notify(format_destination(selection), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 			destination_mapping[scheme] = selection
 		else
 			vim.notify("No destinations found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
@@ -278,9 +278,8 @@ M.clean = a.sync(function()
 		return
 	end
 	local opts = find_build_options()
-	local result = a.wait(
-		a.wrap(util.external_cmd)(vim.tbl_extend("keep", { "xcodebuild", "clean", "-scheme", scheme }, opts or {}))
-	)
+	local result =
+		a.wait(a.wrap(util.external_cmd)(util.cmd_concat({ "xcodebuild", "clean", "-scheme", scheme }, opts or {})))
 	a.wait(main_loop)
 	spinner.stop()
 	if result.code == 0 then
@@ -319,7 +318,7 @@ M.build = a.sync(function()
 		"-configuration",
 		"Debug",
 	}
-	local result = a.wait(a.wrap(util.external_cmd)(vim.tbl_extend("keep", cmd, opts)))
+	local result = a.wait(a.wrap(util.external_cmd)(util.concat(cmd, opts)))
 	a.wait(main_loop)
 	spinner.stop()
 	if result.code == 0 then
