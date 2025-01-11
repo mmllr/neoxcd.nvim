@@ -188,7 +188,14 @@ end
 
 local show_destinations_async = a.wrap(show_destinations)
 
-function M.setup() end
+function M.setup()
+	a.sync(function()
+		local scheme = a.wait(current_scheme_async(vim.fn.getcwd()))
+		if scheme then
+			M.selected_scheme = scheme
+		end
+	end)()
+end
 
 --- Shows a list of schemes and updates the xcode-build-server config
 M.select_schemes = a.sync(function()
