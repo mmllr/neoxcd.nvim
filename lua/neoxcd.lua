@@ -3,7 +3,9 @@ local a = require("async")
 local util = require("util")
 local destination_mapping = {}
 
-local M = {}
+local M = {
+	select_schemes = nil,
+}
 
 ---@class Destination
 ---@field platform string
@@ -115,11 +117,15 @@ end
 
 local current_scheme_async = a.wrap(current_scheme)
 
-local function parse_schemes(input)
+--- Parse the output of `xcodebuild -list -json` into a table of schemes
+---@param input string
+---@param parent_key 'workspace'|'project' Decides what to do if a key is found in more than one map:
+---@return string[]
+local function parse_schemes(input, parent_key)
 	local schemes = {}
 	local data = vim.json.decode(input)
-	if data and data["project"]["schemes"] then
-		for _, scheme in ipairs(data["project"]["schemes"]) do
+	if data and data[parent_key]["schemes"] then
+		for _, scheme in ipairs(data[parent_key]["schemes"]) do
 			table.insert(schemes, scheme)
 		end
 	end
@@ -134,15 +140,28 @@ end
 
 local load_schemes_async = a.wrap(load_schemes)
 
---- Find the xcode project in the current directory
----@param extension string
-local function find_xcode_project(extension)
-	local projects = util.find_files_with_extension(extension, vim.fn.getcwd())
-	return projects[1]
+--- Find the Xcode workspace or project file in the current directory
+--- When no result is found, return empty table (Swift package projects do not have a workspace or project file)
+---@return table?
+local function find_build_options()
+	local workspace = util.find_files_with_extension("xcworkspace", vim.fn.getcwd())
+	if #workspace > 0 then
+		return { "-workspace", workspace[1] }
+	end
+	local project = util.find_files_with_extension("xcodeproj", vim.fn.getcwd())
+	if #project > 0 then
+		return { "-project", project[1] }
+	end
+	local files = vim.fn.glob(vim.fn.getcwd() .. "/Package.swift", false, true) -- Get a list of files
+	if files and #files > 0 then
+		return {}
+	end
+	return nil
 end
 
-local function update_xcode_build_config(scheme, project, callback)
-	util.external_cmd({ "xcode-build-server", "config", "-scheme", scheme, "-project", project }, callback)
+local function update_xcode_build_config(scheme, opts, callback)
+	local cmd = { "xcode-build-server", "config", "-scheme", scheme, opts }
+	util.external_cmd(vim.tbl_extend("keep", cmd, opts or {}), callback)
 end
 
 local update_xcode_build_config_async = a.wrap(update_xcode_build_config)
@@ -153,9 +172,9 @@ end
 
 local show_ui_async = a.wrap(show_ui)
 
-local function show_destinations(scheme, project, callback)
+local function show_destinations(scheme, opts, callback)
 	util.external_cmd(
-		{ "xcodebuild", "-showdestinations", "-scheme", scheme, "-project", project, "-quiet" },
+		vim.tbl_extend("keep", { "xcodebuild", "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}),
 		function(result)
 			local output = output_or_nil(result)
 			if output then
@@ -178,19 +197,31 @@ M.select_schemes = a.sync(function()
 	a.wait(main_loop)
 	spinner.stop()
 	local schemes = {}
-	if output == nil then
+	local opts = find_build_options()
+	if output == nil or opts == nil then
 		vim.notify("No schemes found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 		return
 	else
-		schemes = parse_schemes(output)
+		local key
+		if opts["-project"] then
+			key = "project"
+		else
+			key = "workspace"
+		end
+		schemes = parse_schemes(output, key)
 	end
 	local selection = a.wait(show_ui_async(schemes, {
 		prompt = "Select a scheme",
 	}))
 	if selection then
 		spinner.start("Updating xcode-build-server config...")
-		local project = find_xcode_project("xcodeproj")
-		local success = a.wait(update_xcode_build_config_async(selection, project))
+		local success
+		if #opts == 0 then
+			success = true
+		else
+			success = a.wait(update_xcode_build_config_async(selection, opts))
+		end
+		M.selected_scheme = selection
 		a.wait(main_loop)
 		spinner.stop()
 		if success then
@@ -207,12 +238,12 @@ end)
 
 --- Selects a destination for the current scheme
 M.select_destination = a.sync(function()
-	local scheme = a.wait(current_scheme_async(vim.fn.getcwd()))
+	local scheme = M.selected_scheme or a.wait(current_scheme_async(vim.fn.getcwd()))
 	a.wait(main_loop)
 	if scheme then
 		spinner.start("Loading destinations for scheme: " .. scheme .. "...")
-		local project = find_xcode_project("xcodeproj")
-		local destinations = a.wait(show_destinations_async(scheme, project))
+		local opts = find_build_options()
+		local destinations = a.wait(show_destinations_async(scheme, opts))
 		spinner.stop()
 		if #destinations > 0 and destinations then
 			a.wait(main_loop)
@@ -233,14 +264,16 @@ end)
 --- Cleans the project
 M.clean = a.sync(function()
 	spinner.start("Cleaning project...")
-	local scheme = a.wait(current_scheme_async(vim.fn.getcwd()))
+	local scheme = M.select_scheme or a.wait(current_scheme_async(vim.fn.getcwd()))
 	a.wait(main_loop)
 	if scheme == nil then
 		vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 		return
 	end
-	local project = find_xcode_project("xcodeproj")
-	local result = a.wait(a.wrap(util.external_cmd)({ "xcodebuild", "clean", "-project", project, "-scheme", scheme }))
+	local opts = find_build_options()
+	local result = a.wait(
+		a.wrap(util.external_cmd)(vim.tbl_extend("keep", { "xcodebuild", "clean", "-scheme", scheme }, opts or {}))
+	)
 	a.wait(main_loop)
 	spinner.stop()
 	if result.code == 0 then
@@ -251,8 +284,12 @@ M.clean = a.sync(function()
 end)
 
 M.build = a.sync(function()
-	local project = find_xcode_project("xcodeproj")
-	local scheme = a.wait(current_scheme_async(vim.fn.getcwd()))
+	local opts = find_build_options()
+	if opts == nil then
+		vim.notify("No Xcode project or workspace found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+		return
+	end
+	local scheme = M.selected_scheme or a.wait(current_scheme_async(vim.fn.getcwd()))
 	a.wait(main_loop)
 	if destination_mapping[scheme] == nil then
 		vim.notify(
@@ -274,10 +311,8 @@ M.build = a.sync(function()
 		format_destination_for_build(destination_mapping[scheme]),
 		"-configuration",
 		"Debug",
-		"-project",
-		project,
 	}
-	local result = a.wait(a.wrap(util.external_cmd)(cmd))
+	local result = a.wait(a.wrap(util.external_cmd)(vim.tbl_extend("keep", cmd, opts)))
 	a.wait(main_loop)
 	spinner.stop()
 	if result.code == 0 then
