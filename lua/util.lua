@@ -64,4 +64,17 @@ function M.concat(lhs, rhs)
 	return result
 end
 
+--- check if a list contains a value
+---@param list table
+---@param value any
+---@return boolean
+function M.contains(list, value)
+	for _, v in ipairs(list) do
+		if v == value then
+			return true
+		end
+	end
+	return false
+end
+
 return M

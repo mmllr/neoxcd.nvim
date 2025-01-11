@@ -134,6 +134,7 @@ end
 
 local load_schemes = function(opts, callback)
 	local cmd = { "xcodebuild", "-list", "-json" }
+	vim.notify("opts: " .. vim.inspect(opts), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
 	util.external_cmd(util.concat(cmd, opts), function(result)
 		callback(output_or_nil(result))
 	end)
@@ -211,7 +212,7 @@ M.select_schemes = a.sync(function()
 		return
 	else
 		local key
-		if opts["-project"] then
+		if util.contains(opts, "-project") then
 			key = "project"
 		else
 			key = "workspace"
