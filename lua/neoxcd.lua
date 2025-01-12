@@ -2,6 +2,7 @@ local spinner = require("spinner")
 local nio = require("nio")
 local util = require("util")
 local destination_mapping = {}
+local ui = require("ui")
 
 local M = {
 	selected_scheme = nil,
@@ -335,6 +336,7 @@ M.build = nio.create(function()
 		local end_time = os.time()
 		local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
 		vim.notify(msg, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+		-- ui.show_window_with_content(result)
 	else
 		vim.notify("Build failed", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
 	end
