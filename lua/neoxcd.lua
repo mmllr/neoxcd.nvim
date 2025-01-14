@@ -181,6 +181,20 @@ local function run_external_cmd(cmd, args)
 	return output
 end
 
+local function run_build(cmd, args)
+	local buildLog = nio.file.open(nio.fn.getcwd() .. "/build.log", "w")
+	local result = nio.process.run({
+		cmd = cmd,
+		args = args,
+		stdout = buildLog,
+	})
+	if result == nil then
+		return -1, nil
+	end
+	local retval, _ = result.result(true)
+	return retval
+end
+
 local function show_destinations(scheme, opts)
 	local output =
 		run_external_cmd("xcodebuild", util.concat({ "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}))
@@ -328,17 +342,26 @@ M.build = nio.create(function()
 		format_destination_for_build(destination_mapping[scheme]),
 		"-configuration",
 		"Debug",
+		"-quiet",
 	}
-	local result = run_external_cmd("xcodebuild", util.concat(cmd, opts))
+	local code = run_build("xcodebuild", util.concat(cmd, opts))
 	nio.scheduler()
 	spinner.stop()
-	if result ~= nil then
+	if code == 0 then
 		local end_time = os.time()
 		local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
 		vim.notify(msg, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
-		-- ui.show_window_with_content(result)
 	else
 		vim.notify("Build failed", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+	end
+	local output = nio.file.open(nio.fn.getcwd() .. "/build.log")
+	if output then
+		local content, error = output.read(nil, 0)
+		output.close()
+		if content and not error then
+			nio.scheduler()
+			ui.show_window_with_content(content)
+		end
 	end
 end)
 
