@@ -140,13 +140,7 @@ M.select_schemes = nio.create(function()
     vim.notify("No schemes found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     return
   else
-    local key
-    if vim.list_contains(opts, "-project") then
-      key = "project"
-    else
-      key = "workspace"
-    end
-    schemes = util.parse_schemes(output, key)
+    schemes = util.parse_schemes(output)
   end
   local selection = select_async(schemes, {
     prompt = "Select a scheme",

@@ -97,14 +97,21 @@ end
 
 ---Parse the output of `xcodebuild -list -json` into a table of schemes
 ---@param input string
----@param parent_key 'workspace'|'project' Decides what to do if a key is found in more than one map:
 ---@return string[]
-function M.parse_schemes(input, parent_key)
+function M.parse_schemes(input)
   local schemes = {}
   local data = vim.json.decode(input)
-  if data and data[parent_key]["schemes"] then
-    for _, scheme in ipairs(data[parent_key]["schemes"]) do
-      table.insert(schemes, scheme)
+  if data then
+    local parent_key
+    if data["project"] ~= nil then
+      parent_key = "project"
+    elseif data["workspace"] ~= nil then
+      parent_key = "workspace"
+    end
+    if parent_key and data[parent_key]["schemes"] ~= nil then
+      for _, scheme in ipairs(data[parent_key]["schemes"]) do
+        table.insert(schemes, scheme)
+      end
     end
   end
   return schemes
