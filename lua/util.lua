@@ -26,40 +26,36 @@ function M.concat(lhs, rhs)
   return result
 end
 
+local function extract_fields(entry)
+  -- { platform:macOS, arch:arm64, variant:Designed for [iPad,iPhone], id:c0ffeec0-c0ffeec0ffeec0ff, name:My Mac }
+  local result = {}
+  for entry in vim.gsplit(entry, ", ", { plain = true }) do
+    local key, value = entry:match("(%w+):(.+)")
+    if key and value then
+      if key == "error" then
+        return nil
+      end
+      result[key] = value
+    end
+  end
+  if vim.tbl_isempty(result) then
+    return nil
+  end
+  return result
+end
+
 ---Parse the output of `xcodebuild -showdestinations` into a table of destinations
 ---@param text string
 ---@return Destination[]
 function M.parse_destinations(text)
   local destinations = {}
 
-  -- Pattern to match each destination block
   for block in text:gmatch("{(.-)}") do
-    local destination = {}
+    local destination = extract_fields(vim.trim(block))
 
-    -- Extract key-value pairs within the block
-    for key, value in block:gmatch("(%w+):([^,]+)") do
-      -- Remove any surrounding spaces or brackets
-      key = key:match("^%s*(.-)%s*$")
-      value = value:match("^%s*(.-)%s*$")
-
-      -- Handle special cases for lists and numbers
-      if value:match("^%[.*%]$") then
-        -- Convert lists like [iPad,iPhone] into Lua tables
-        local list = {}
-        for item in value:gmatch("[^%[%],]+") do
-          table.insert(list, item)
-        end
-        value = list
-      elseif tonumber(value) then
-        value = tonumber(value) -- Convert numeric strings to numbers
-      elseif value == "nil" then
-        value = nil -- Convert "nil" strings to actual nil
-      end
-
-      destination[key] = value
+    if destination ~= nil then
+      table.insert(destinations, destination)
     end
-
-    table.insert(destinations, destination)
   end
 
   return destinations
