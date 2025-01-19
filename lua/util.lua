@@ -144,4 +144,51 @@ function M.parse_schemes(input)
   return schemes
 end
 
+---Parse the output of `xcodebuild` into an optional error message
+---@param error_message string
+---@return QuickfixEntry?
+local function parse_error_message(error_message)
+  local pattern = "([^:]+):(%d+):(%d+): (%a+): (.+)"
+  local filename, line, column, type, message = error_message:match(pattern)
+  local function get_type()
+    if type == "error" then
+      return "E"
+    elseif type == "warning" then
+      return "W"
+    else
+      return "I"
+    end
+  end
+  if filename and line and column and type and message then
+    local lnum = tonumber(line)
+    local col = tonumber(column)
+    if lnum == nil or col == nil then
+      return nil
+    end
+    ---@type QuickfixEntry
+    return {
+      filename = filename,
+      lnum = lnum,
+      col = col,
+      type = get_type(),
+      text = message,
+    }
+  else
+    return nil
+  end
+end
+---Parse the output of `` into a table of build settings
+---@param input string
+---@return QuickfixEntry[]
+function M.parse_quickfix_list(input)
+  local results = {}
+  local lines = vim.split(input, "\n", { trimempty = true })
+  for _, line in ipairs(lines) do
+    if parse_error_message(line) then
+      table.insert(results, parse_error_message(line))
+    end
+  end
+  return results
+end
+
 return M

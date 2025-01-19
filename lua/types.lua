@@ -6,3 +6,11 @@
 ---@field id string
 ---@field name string
 ---@field OS? string
+
+---A class representing a vim quickfix entry
+---@class QuickfixEntry
+---@field filename string
+---@field lnum number
+---@field col number
+---@field text string
+---@field type string "W" | "E
