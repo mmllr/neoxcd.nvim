@@ -4,13 +4,11 @@ local util = require("util")
 local destination_mapping = {}
 local ui = require("ui")
 
-local M = {
-  selected_scheme = nil,
-}
+local selected_scheme = nil
 
 ---@param directory string
 ---@return string?
-function M.current_scheme(directory)
+local function current_scheme(directory)
   local file = nio.file.open(directory .. "/buildServer.json")
   if not file then
     return nil
@@ -114,15 +112,8 @@ local function show_destinations(scheme, opts)
   end
 end
 
-M.setup = nio.create(function()
-  local scheme = M.current_scheme(nio.fn.getcwd())
-  if scheme then
-    M.selected_scheme = scheme
-  end
-end)
-
 --- Shows a list of schemes and updates the xcode-build-server config
-M.select_schemes = nio.create(function()
+local select_schemes = function()
   spinner.start("Loading schemes...")
   local opts = find_build_options()
   local output = load_schemes(opts)
@@ -146,7 +137,7 @@ M.select_schemes = nio.create(function()
     else
       success = update_xcode_build_config(selection, opts)
     end
-    M.selected_scheme = selection
+    selected_scheme = selection
     nio.scheduler()
     spinner.stop()
     if success then
@@ -155,11 +146,11 @@ M.select_schemes = nio.create(function()
       vim.notify("Failed to select scheme: " .. selection, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     end
   end
-end)
+end
 
 --- Selects a destination for the current scheme
-M.select_destination = nio.create(function()
-  local scheme = M.selected_scheme or M.current_scheme(nio.fn.getcwd())
+local function select_destination()
+  local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
   nio.scheduler()
   if scheme then
     spinner.start("Loading destinations for scheme: " .. scheme .. "...")
@@ -179,12 +170,12 @@ M.select_destination = nio.create(function()
   else
     vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
   end
-end)
+end
 
 --- Cleans the project
-M.clean = nio.create(function()
+local function clean()
   spinner.start("Cleaning project...")
-  local scheme = M.select_scheme or M.current_scheme(nio.fn.getcwd())
+  local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
   nio.scheduler()
   if scheme == nil then
     vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
@@ -212,15 +203,15 @@ M.clean = nio.create(function()
   else
     vim.notify("Failed to clean project", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
   end
-end)
+end
 
-M.build = nio.create(function()
+local function build()
   local opts = find_build_options()
   if opts == nil then
     vim.notify("No Xcode project or workspace found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     return
   end
-  local scheme = M.selected_scheme or M.current_scheme(nio.fn.getcwd())
+  local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
   nio.scheduler()
   if destination_mapping[scheme] == nil then
     vim.notify(
@@ -262,6 +253,18 @@ M.build = nio.create(function()
       ui.show_window_with_content(content)
     end
   end
-end)
+end
 
-return M
+return {
+  current_scheme = current_scheme,
+  setup = nio.create(function()
+    local scheme = current_scheme(nio.fn.getcwd())
+    if scheme then
+      selected_scheme = scheme
+    end
+  end),
+  clean = nio.create(clean),
+  build = nio.create(build),
+  select_schemes = nio.create(select_schemes),
+  select_destination = nio.create(select_destination),
+}
