@@ -1,0 +1,8 @@
+---A class representing a destination for a build.
+---@class Destination
+---@field platform string
+---@field arch? string
+---@field variant? string
+---@field id string
+---@field name string
+---@field OS? string

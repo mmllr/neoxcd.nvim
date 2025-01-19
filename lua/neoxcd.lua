@@ -8,13 +8,6 @@ local M = {
   selected_scheme = nil,
 }
 
----@class Destination
----@field platform string
----@field arch? string
----@field id string
----@field name string
----@field OS? string
-
 ---@param directory string
 ---@return string?
 function M.current_scheme(directory)
