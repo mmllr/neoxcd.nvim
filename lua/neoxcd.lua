@@ -6,6 +6,7 @@ local ui = require("ui")
 
 local selected_scheme = nil
 
+---@async
 ---@param directory string
 ---@return string?
 local function current_scheme(directory)
@@ -26,6 +27,7 @@ local function current_scheme(directory)
   end
 end
 
+---@async
 local load_schemes = function(opts)
   local build = nio.process.run({
     cmd = "xcodebuild",
@@ -58,6 +60,7 @@ local function find_build_options()
   return nil
 end
 
+---@async
 local function update_xcode_build_config(scheme, opts)
   local build = nio.process.run({
     cmd = "xcode-build-server",
@@ -75,6 +78,7 @@ end
 
 local select_async = nio.wrap(show_ui, 3)
 
+---@async
 local function run_external_cmd(cmd, args)
   local result = nio.process.run({
     cmd = cmd,
@@ -88,6 +92,7 @@ local function run_external_cmd(cmd, args)
   return output
 end
 
+---@async
 local function run_build(cmd, args)
   local buildLog = nio.file.open(nio.fn.getcwd() .. "/build.log", "w")
   local result = nio.process.run({
@@ -102,6 +107,7 @@ local function run_build(cmd, args)
   return retval
 end
 
+---@async
 local function show_destinations(scheme, opts)
   local output =
     run_external_cmd("xcodebuild", util.concat({ "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}))
@@ -113,6 +119,7 @@ local function show_destinations(scheme, opts)
 end
 
 --- Shows a list of schemes and updates the xcode-build-server config
+---@async
 local select_schemes = function()
   spinner.start("Loading schemes...")
   local opts = find_build_options()
@@ -149,6 +156,7 @@ local select_schemes = function()
 end
 
 --- Selects a destination for the current scheme
+---@async
 local function select_destination()
   local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
   nio.scheduler()
@@ -172,7 +180,8 @@ local function select_destination()
   end
 end
 
---- Cleans the project
+---Cleans the project
+---@async
 local function clean()
   spinner.start("Cleaning project...")
   local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
@@ -205,6 +214,8 @@ local function clean()
   end
 end
 
+---Builds the project
+---@async
 local function build()
   local opts = find_build_options()
   if opts == nil then
