@@ -260,8 +260,11 @@ local function build()
     local content, error = output.read(nil, 0)
     output.close()
     if content and not error then
-      nio.scheduler()
-      ui.show_window_with_content(content)
+      local quickfix = util.parse_quickfix_list(content)
+      if #quickfix > 0 then
+        nio.fn.setqflist(quickfix)
+        vim.cmd("copen")
+      end
     end
   end
 end
