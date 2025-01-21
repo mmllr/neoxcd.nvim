@@ -78,11 +78,16 @@ end
 
 local select_async = nio.wrap(show_ui, 3)
 
+---Run an external command
 ---@async
-local function run_external_cmd(cmd, args)
+---@param cmd string
+---@param args string[]|nil
+---@param detached boolean|nil
+local function run_external_cmd(cmd, args, detached)
   local result = nio.process.run({
     cmd = cmd,
     args = args,
+    detached = detached,
   })
   if result == nil then
     return nil
@@ -269,6 +274,33 @@ local function build()
   end
 end
 
+---Starts the simulator
+---@async
+---@param id string
+local function open_in_simulator(id)
+  spinner.start("Opening in simulator...")
+  local result = run_external_cmd("xcrun", { "simctl", "boot", id })
+  nio.scheduler()
+  if result == nil then
+    spinner.stop()
+    vim.notify("Failed to start simulator", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    return
+  end
+  local xcode_path = run_external_cmd("xcode-select", { "-p" })
+  if xcode_path == nil then
+    spinner.stop()
+    vim.notify("Failed to find Xcode path", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    return
+  end
+  local simulator_path = string.gsub(xcode_path, "\n", "") .. "/Applications/Simulator.app"
+  local open = run_external_cmd("open", { simulator_path })
+  spinner.stop()
+  if open == nil then
+    nio.scheduler()
+    vim.notify("Failed to open simulator", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+  end
+end
+
 return {
   current_scheme = current_scheme,
   setup = nio.create(function()
@@ -281,4 +313,18 @@ return {
   build = nio.create(build),
   select_schemes = nio.create(select_schemes),
   select_destination = nio.create(select_destination),
+  open_in_simulator = nio.create(function()
+    local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
+    nio.scheduler()
+    local destination = destination_mapping[scheme]
+    if destination == nil then
+      vim.notify(
+        "No destination selected, use NeoxcdSelectDestination to choose a destination",
+        vim.log.levels.ERROR,
+        { id = "Neoxcd", title = "Neoxcd" }
+      )
+      return
+    end
+    open_in_simulator(destination.id)
+  end),
 }

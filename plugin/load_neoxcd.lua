@@ -44,6 +44,12 @@ local subcommand_tbl = {
     end,
     -- This subcommand has no completions
   },
+  simulator = {
+    impl = function(args, opts)
+      require("neoxcd").open_in_simulator()
+    end,
+    -- This subcommand has no completions
+  },
 }
 
 ---@param opts table :h lua-guide-commands-create
