@@ -8,7 +8,7 @@ local selected_scheme = nil
 
 ---@async
 ---@param directory string
----@return string?
+---@return string|nil
 local function current_scheme(directory)
   local file = nio.file.open(directory .. "/buildServer.json")
   if not file then
@@ -43,7 +43,7 @@ end
 
 --- Find the Xcode workspace or project file in the current directory
 --- When no result is found, return empty table (Swift package projects do not have a workspace or project file)
----@return table?
+---@return table|nil
 local function find_build_options()
   local workspace = util.find_files_with_extension("xcworkspace", nio.fn.getcwd())
   if #workspace > 0 then

@@ -146,7 +146,7 @@ end
 
 ---Parse the output of `xcodebuild` into an optional error message
 ---@param error_message string
----@return QuickfixEntry?
+---@return QuickfixEntry|nil
 local function parse_error_message(error_message)
   local pattern = "([^:]+):(%d+):(%d+): (%a+): (.+)"
   local filename, line, column, type, message = error_message:match(pattern)
