@@ -41,21 +41,44 @@ local load_schemes = function(opts)
   return output
 end
 
+--- Returns the path to the Xcode workspace or project or Package.swift file in the current directory
+---@async
+---@return Project|nil
+local function project_file()
+  local files = vim.fs.find(function(name, path)
+    return vim.endswith(name, ".xcworkspace") or vim.endswith(name, ".xcodeproj") or vim.endswith(name, "Package.swift")
+  end, { limit = 3 })
+
+  for _, file in ipairs(files) do
+    if vim.endswith(file, "xcworkspace") then
+      return { path = file, type = "workspace" }
+    end
+  end
+  for _, file in ipairs(files) do
+    if vim.endswith(file, "xcodeproj") then
+      return { path = file, type = "project" }
+    end
+  end
+  for _, file in ipairs(files) do
+    if vim.endswith(file, "Package.swift") then
+      return { path = file, type = "package" }
+    end
+  end
+  return nil
+end
+
 --- Find the Xcode workspace or project file in the current directory
 --- When no result is found, return empty table (Swift package projects do not have a workspace or project file)
+---@async
 ---@return table|nil
 local function find_build_options()
-  local workspace = util.find_files_with_extension("xcworkspace", nio.fn.getcwd())
-  if #workspace > 0 then
-    return { "-workspace", workspace[1] }
-  end
-  local project = util.find_files_with_extension("xcodeproj", nio.fn.getcwd())
-  if #project > 0 then
-    return { "-project", project[1] }
-  end
-  local files = nio.fn.glob(nio.fn.getcwd() .. "/Package.swift", false, true) -- Get a list of files
-  if files and #files > 0 then
-    return {}
+  local project = project_file()
+  if project ~= nil then
+    if project.type == "package" then
+      return {}
+    end
+    local type = project.type
+    return { "-" .. type, project.path }
   end
   return nil
 end
@@ -301,6 +324,26 @@ local function open_in_simulator(id)
   end
 end
 
+---Opens the current project in Xcode
+---@async
+local function open_in_xcode()
+  spinner.start("Opening in Xcode...")
+  local xcode_path = run_external_cmd("xcode-select", { "-p" })
+  nio.scheduler()
+  if xcode_path == nil then
+    spinner.stop()
+    vim.notify("Failed to find Xcode path", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    return
+  end
+  local project = project_file()
+  xcode_path = util.remove_n_components(xcode_path, 2)
+  if project ~= nil then
+    local open = run_external_cmd("open", { xcode_path, project.path })
+  end
+  nio.scheduler()
+  spinner.stop()
+end
+
 return {
   current_scheme = current_scheme,
   setup = nio.create(function()
@@ -327,4 +370,5 @@ return {
     end
     open_in_simulator(destination.id)
   end),
+  open_in_xcode = nio.create(open_in_xcode),
 }

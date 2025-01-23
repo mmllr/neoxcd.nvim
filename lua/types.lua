@@ -14,3 +14,11 @@
 ---@field col number
 ---@field text string
 ---@field type string "W" | "E
+
+---An enum describing a project
+---@alias ProjectType "project" | "workspace" | "package"
+
+---A class representing a project
+---@class Project
+---@field path string
+---@field type ProjectType

@@ -50,6 +50,11 @@ local subcommand_tbl = {
     end,
     -- This subcommand has no completions
   },
+  xcode = {
+    impl = function(args, opts)
+      require("neoxcd").open_in_xcode()
+    end,
+  },
 }
 
 ---@param opts table :h lua-guide-commands-create

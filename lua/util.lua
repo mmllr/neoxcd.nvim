@@ -27,10 +27,10 @@ function M.concat(lhs, rhs)
   return result
 end
 
-local function extract_fields(entry)
+local function extract_fields(destination)
   -- { platform:macOS, arch:arm64, variant:Designed for [iPad,iPhone], id:c0ffeec0-c0ffeec0ffeec0ff, name:My Mac }
   local result = {}
-  for entry in vim.gsplit(entry, ", ", { plain = true }) do
+  for entry in vim.gsplit(destination, ", ", { plain = true }) do
     local key, value = entry:match("(%w+):(.+)")
     if key and value then
       if key == "error" then
@@ -177,6 +177,18 @@ local function parse_error_message(error_message)
     return nil
   end
 end
+
+---Remove n components from the end of a path
+---@param path string
+---@param n number
+---@return string
+function M.remove_n_components(path, n)
+  for i = 1, n do
+    path = vim.fs.dirname(path)
+  end
+  return path
+end
+
 ---Parse the output of `` into a table of build settings
 ---@param input string
 ---@return QuickfixEntry[]
