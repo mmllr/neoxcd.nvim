@@ -39,8 +39,8 @@ describe("Scheme parsing", function()
       "tvOSCaseStudies",
       "VoiceMemos",
     }
-    local util = require("util")
-    assert.are.same(expected, util.parse_schemes(json))
+    local xcode = require("xcode")
+    assert.are.same(expected, xcode.parse_schemes(json))
   end)
 
   it("Parsing output from project", function()
@@ -68,8 +68,8 @@ describe("Scheme parsing", function()
       "SchemeB",
     }
 
-    local util = require("util")
-    assert.are.same(expexted, util.parse_schemes(json))
+    local xcode = require("xcode")
+    assert.are.same(expexted, xcode.parse_schemes(json))
   end)
 end)
 
@@ -174,50 +174,51 @@ describe("Destination parsing", function()
         platform = "iOS Simulator",
       },
     }
-    assert.are.same(expected, require("util").parse_destinations(output))
+    assert.are.same(expected, require("xcode").parse_destinations(output))
   end)
 end)
 
 describe("Destination format for UI", function()
   --@type Destination
   local destination
+  local util = require("util")
   it("Format a mac", function()
     destination = { name = "My Mac", platform = "macOS", arch = "arm64" }
-    assert.are.equal("󰇄 My Mac", require("util").format_destination(destination))
+    assert.are.equal("󰇄 My Mac", util.format_destination(destination))
   end)
 
   it("Format a mac with variant", function()
     destination = { name = "My Mac", platform = "macOS", variant = "Mac Catalyst" }
-    assert.are.equal("󰇄 My Mac (Mac Catalyst)", require("util").format_destination(destination))
+    assert.are.equal("󰇄 My Mac (Mac Catalyst)", util.format_destination(destination))
   end)
 
   it("Formats a tvOS", function()
     destination = { name = "Any tvOS Device", platform = "tvOS" }
-    assert.are.equal(" Any tvOS Device", require("util").format_destination(destination))
+    assert.are.equal(" Any tvOS Device", util.format_destination(destination))
   end)
 
   it("Formats a watchOS", function()
     destination = { name = "Any watchOS Device", platform = "watchOS" }
-    assert.are.equal("󰢗 Any watchOS Device", require("util").format_destination(destination))
+    assert.are.equal("󰢗 Any watchOS Device", util.format_destination(destination))
   end)
 
   it("Formats any simulator", function()
     destination = { name = "Any iOS Simulator Device", platform = "iOS Simulator" }
-    assert.are.equal("󰦧 Any iOS Simulator Device", require("util").format_destination(destination))
+    assert.are.equal("󰦧 Any iOS Simulator Device", util.format_destination(destination))
   end)
 
   it("Formats a phone specific simulator", function()
     destination = { name = "iPhone 6s", platform = "iOS Simulator", OS = "15.5" }
-    assert.are.equal(" iPhone 6s (15.5)", require("util").format_destination(destination))
+    assert.are.equal(" iPhone 6s (15.5)", util.format_destination(destination))
   end)
 
   it("Formats a tablet specific simulator", function()
     destination = { name = "iPad Air", platform = "iOS Simulator", OS = "18.2" }
-    assert.are.equal("󰓶 iPad Air (18.2)", require("util").format_destination(destination))
+    assert.are.equal("󰓶 iPad Air (18.2)", util.format_destination(destination))
   end)
 
   it("Formats a DriverKit platform", function()
     destination = { name = "Any DriverKit Host", platform = "DriverKit" }
-    assert.are.equal("󰇄 Any DriverKit Host", require("util").format_destination(destination))
+    assert.are.equal("󰇄 Any DriverKit Host", util.format_destination(destination))
   end)
 end)

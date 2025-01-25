@@ -1,9 +1,8 @@
 local spinner = require("spinner")
 local nio = require("nio")
 local util = require("util")
+local xcode = require("xcode")
 local destination_mapping = {}
-local ui = require("ui")
-
 local selected_scheme = nil
 
 ---@async
@@ -140,7 +139,7 @@ local function show_destinations(scheme, opts)
   local output =
     run_external_cmd("xcodebuild", util.concat({ "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}))
   if output then
-    return util.parse_destinations(output)
+    return xcode.parse_destinations(output)
   else
     return nil
   end
@@ -154,13 +153,11 @@ local select_schemes = function()
   local output = load_schemes(opts)
   nio.scheduler()
   spinner.stop()
-  local schemes = {}
   if output == nil or opts == nil then
     vim.notify("No schemes found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     return
-  else
-    schemes = util.parse_schemes(output)
   end
+  local schemes = xcode.parse_schemes(output)
   local selection = select_async(schemes, {
     prompt = "Select a scheme",
   })
@@ -254,7 +251,7 @@ local function build()
   nio.scheduler()
   if destination_mapping[scheme] == nil then
     vim.notify(
-      "No destination selected, use NeoxcdSelectDestination to choose a destination",
+      "No destination selected, use Neoxcd destination to choose a destination",
       vim.log.levels.ERROR,
       { id = "Neoxcd", title = "Neoxcd" }
     )
@@ -288,7 +285,7 @@ local function build()
     local content, error = output.read(nil, 0)
     output.close()
     if content and not error then
-      local quickfix = util.parse_quickfix_list(content)
+      local quickfix = xcode.parse_quickfix_list(content)
       if #quickfix > 0 then
         nio.fn.setqflist(quickfix)
         vim.cmd("copen")

@@ -47,6 +47,40 @@ note: Run script build phase 'Build number from git' will be run during every bu
       },
     }
 
-    assert.are.same(expected, require("util").parse_quickfix_list(logs))
+    assert.are.same(expected, require("xcode").parse_quickfix_list(logs))
+  end)
+
+  it("Parses the project settings", function()
+    local log = [[
+    export PRODUCT_BUNDLE_IDENTIFIER\=com.product.myproduct
+    export PRODUCT_BUNDLE_PACKAGE_TYPE\=APPL
+    export PRODUCT_MODULE_NAME\=MyProduct-Folder
+    export PRODUCT_NAME\=MyProduct
+    export PRODUCT_SETTINGS_PATH\=/Users/user/MyProject-Folder/MyProduct/Info.plist
+    export PRODUCT_TYPE\=com.apple.product-type.application
+    export PROFILING_CODE\=NO
+    export PROJECT\=MyProject
+    export PROJECT_DERIVED_FILE_DIR\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources
+    export PROJECT_DIR\=/Users/user/MyProject
+    export PROJECT_FILE_PATH\=/Users/user/MyProject/MyProject.xcodeproj
+    export PROJECT_GUID\=679ad98a1d3d4fc98c1821c175190d3f
+    export PROJECT_NAME\=MyProject
+    export PROJECT_TEMP_DIR\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build
+    export PROJECT_TEMP_ROOT\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex
+      ]]
+
+    ---@type Target
+    local expected = {
+      name = "MyProduct",
+      bundle_id = "com.product.myproduct",
+      module_name = "MyProduct-Folder",
+      plist = "/Users/user/MyProject-Folder/MyProduct/Info.plist",
+      project = {
+        name = "MyProject",
+        path = "/Users/user/MyProject/MyProject.xcodeproj",
+        type = "project",
+      },
+    }
+    assert.are.same(expected, require("xcode").parse_build_output(log))
   end)
 end)
