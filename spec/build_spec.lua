@@ -51,6 +51,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
   end)
 
   it("Parses the project settings", function()
+    local sut = require("xcode")
     local log = [[
     export PRODUCT_BUNDLE_IDENTIFIER\=com.product.myproduct
     export PRODUCT_BUNDLE_PACKAGE_TYPE\=APPL
@@ -69,6 +70,9 @@ note: Run script build phase 'Build number from git' will be run during every bu
     export PROJECT_TEMP_ROOT\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex
       ]]
 
+    for line in string.gmatch(log, "[^\r\n]+") do
+      sut.add_build_log(line)
+    end
     ---@type Target
     local expected = {
       name = "MyProduct",
@@ -81,6 +85,6 @@ note: Run script build phase 'Build number from git' will be run during every bu
         type = "project",
       },
     }
-    assert.are.same(expected, require("xcode").parse_build_output(log))
+    assert.are.same(expected, sut.build_target())
   end)
 end)

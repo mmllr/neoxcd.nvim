@@ -1,16 +1,19 @@
 local M = {}
 
----@return table
-local function parse_exported_variables(log)
-  local result = {}
-  local lines = vim.split(log, "\n", { trimempty = true })
-  for _, line in ipairs(lines) do
-    local key, value = line:match("export%s+(%S+)%s*\\=%s*(.+)")
-    if key and value then
-      result[key] = value
-    end
+---@type string[]
+local xcodebuild_log = {}
+
+---The exported variables from the xcodebuild output
+---@type table
+local build_vars = {}
+
+---Parse the output of `xcodebuild` into exported variables
+---@param line string
+local function parse_exported_variables(line)
+  local key, value = line:match("export%s+(%S+)%s*\\=%s*(.+)")
+  if key and value then
+    build_vars[key] = value
   end
-  return result
 end
 
 local function extract_fields(destination)
@@ -65,6 +68,19 @@ local function parse_error_message(error_message)
   end
 end
 
+---The lines frobuild_logm the xcodebuild output
+---@return string[]
+function M.build_log()
+  return xcodebuild_log
+end
+
+---Adds a line from the xcodebuild output to the build log
+---@param line string
+function M.add_build_log(line)
+  table.insert(xcodebuild_log, line)
+  parse_exported_variables(line)
+end
+
 ---Parse the output of `xcodebuild -list -json` into a table of schemes
 ---@param input string
 ---@return string[]
@@ -87,33 +103,29 @@ function M.parse_schemes(input)
   return schemes
 end
 
----Parses a target from the xcodebuild output
----@param log string
+---Parse the product after a successful build
 ---@return Target|nil
-function M.parse_build_output(log)
-  local vars = parse_exported_variables(log)
-
+function M.build_target()
   if
-    vars.PROJECT
-    and vars.PRODUCT_NAME
-    and vars.PRODUCT_BUNDLE_IDENTIFIER
-    and vars.PRODUCT_SETTINGS_PATH
-    and vars.PROJECT_FILE_PATH
+    build_vars.PROJECT
+    and build_vars.PRODUCT_NAME
+    and build_vars.PRODUCT_BUNDLE_IDENTIFIER
+    and build_vars.PRODUCT_SETTINGS_PATH
+    and build_vars.PROJECT_FILE_PATH
   then
     local target = {
-      name = vars.PRODUCT_NAME,
-      bundle_id = vars.PRODUCT_BUNDLE_IDENTIFIER,
-      module_name = vars.PRODUCT_MODULE_NAME,
-      plist = vars.PRODUCT_SETTINGS_PATH,
+      name = build_vars.PRODUCT_NAME,
+      bundle_id = build_vars.PRODUCT_BUNDLE_IDENTIFIER,
+      module_name = build_vars.PRODUCT_MODULE_NAME,
+      plist = build_vars.PRODUCT_SETTINGS_PATH,
       project = {
-        name = vars.PROJECT,
-        path = vars.PROJECT_FILE_PATH,
+        name = build_vars.PROJECT,
+        path = build_vars.PROJECT_FILE_PATH,
         type = "project",
       },
     }
     return target
   end
-
   return nil
 end
 

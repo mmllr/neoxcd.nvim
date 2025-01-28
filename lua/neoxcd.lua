@@ -4,6 +4,8 @@ local util = require("util")
 local xcode = require("xcode")
 local destination_mapping = {}
 local selected_scheme = nil
+---@type string[]
+local build_output = {}
 
 ---@async
 ---@param directory string
@@ -118,6 +120,23 @@ local function run_external_cmd(cmd, args, detached)
   result.close()
   return output
 end
+
+---@param callback function
+local function buildit(cmd, callback)
+  ---@type vim.SystemOpts
+  vim.system(cmd, {
+    text = true,
+    stdout = function(err, data)
+      if data then
+        xcode.parse_quickfix_list(data)
+      end
+    end,
+  }, function(obj)
+    callback(obj.code)
+  end)
+end
+
+local buildit_async = nio.wrap(buildit, 2)
 
 ---@async
 local function run_build(cmd, args)
@@ -261,6 +280,7 @@ local function build()
   spinner.start("Building " .. scheme .. "...")
   --- TODO: query available configurations instead of hardcoding "Debug"
   local cmd = {
+    "xcodebuild",
     "build",
     "-scheme",
     scheme,
@@ -268,29 +288,20 @@ local function build()
     util.format_destination_for_build(destination_mapping[scheme]),
     "-configuration",
     "Debug",
-    "-quiet",
+    -- "-quiet",
   }
-  local code = run_build("xcodebuild", util.concat(cmd, opts))
+  local code = buildit_async(cmd)
   nio.scheduler()
   spinner.stop()
   if code == 0 then
     local end_time = os.time()
-    local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
+    local msg = string.format(
+      "Build succeeded in %.2f seconds, target: " .. vim.inspect(xcode.build_target()),
+      os.difftime(end_time, start_time)
+    )
     vim.notify(msg, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   else
     vim.notify("Build failed", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-  end
-  local output = nio.file.open(nio.fn.getcwd() .. "/build.log")
-  if output then
-    local content, error = output.read(nil, 0)
-    output.close()
-    if content and not error then
-      local quickfix = xcode.parse_quickfix_list(content)
-      if #quickfix > 0 then
-        nio.fn.setqflist(quickfix)
-        vim.cmd("copen")
-      end
-    end
   end
 end
 
