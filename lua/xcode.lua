@@ -1,18 +1,24 @@
+local nio = require("nio")
+local util = require("util")
+local project = require("project")
+local spinner = require("spinner")
 local M = {}
 
----@type string[]
-local xcodebuild_log = {}
-
----The exported variables from the xcodebuild output
----@type table
-local build_vars = {}
+---@private
+---@class Build
+---@field variables? table
+---@field log? string[]
+local build = {}
 
 ---Parse the output of `xcodebuild` into exported variables
 ---@param line string
 local function parse_exported_variables(line)
+  if build.variables == nil then
+    build.variables = {}
+  end
   local key, value = line:match("export%s+(%S+)%s*\\=%s*(.+)")
   if key and value then
-    build_vars[key] = value
+    build.variables[key] = value
   end
 end
 
@@ -68,16 +74,86 @@ local function parse_error_message(error_message)
   end
 end
 
----The lines frobuild_logm the xcodebuild output
----@return string[]
-function M.build_log()
-  return xcodebuild_log
+---Parse the product after a successful build
+local function update_build_target()
+  if project.currernt_project == nil then
+    return
+  end
+  if
+    build.variables.PROJECT
+    and build.variables.PRODUCT_NAME
+    and build.variables.PRODUCT_BUNDLE_IDENTIFIER
+    and build.variables.PRODUCT_SETTINGS_PATH
+    and build.variables.PROJECT_FILE_PATH
+  then
+    project.current_target = {
+      name = build.variables.PRODUCT_NAME,
+      bundle_id = build.variables.PRODUCT_BUNDLE_IDENTIFIER,
+      module_name = build.variables.PRODUCT_MODULE_NAME,
+      plist = build.variables.PRODUCT_SETTINGS_PATH,
+    }
+    project.current_project.name = build.variables.PROJECT
+    project.current_project.path = build.variables.PROJECT_FILE_PATH
+  end
+end
+
+---@param callback fun(code: number)
+local function run_build(cmd, callback)
+  ---@type vim.SystemOpts
+  vim.system(cmd, {
+    text = true,
+    stdout = function(err, data)
+      if data then
+        M.add_build_log(data)
+      end
+    end,
+    detach = true,
+  }, function(obj)
+    callback(obj.code)
+  end)
+end
+
+---Builds the target
+---@async
+---@return number
+function M.build()
+  if not project.current_project.scheme then
+    return -1
+  end
+  if not project.current_project.destination then
+    return -2
+  end
+
+  build = {
+    variables = {},
+    log = {},
+  }
+
+  local cmd = {
+    "xcodebuild",
+    "build",
+    "-scheme",
+    project.current_project.scheme,
+    "-destination",
+    util.format_destination_for_build(project.current_project.destination),
+    "-configuration",
+    "Debug",
+    -- "-quiet",
+  }
+  spinner.start("Building " .. project.current_project.scheme .. "...")
+  local result = nio.wrap(run_build, 2)(cmd)
+  update_build_target()
+  spinner.stop()
+  return result
 end
 
 ---Adds a line from the xcodebuild output to the build log
 ---@param line string
 function M.add_build_log(line)
-  table.insert(xcodebuild_log, line)
+  if build.log == nil then
+    build.log = {}
+  end
+  table.insert(build.log, line)
   parse_exported_variables(line)
 end
 
@@ -101,32 +177,6 @@ function M.parse_schemes(input)
     end
   end
   return schemes
-end
-
----Parse the product after a successful build
----@return Target|nil
-function M.build_target()
-  if
-    build_vars.PROJECT
-    and build_vars.PRODUCT_NAME
-    and build_vars.PRODUCT_BUNDLE_IDENTIFIER
-    and build_vars.PRODUCT_SETTINGS_PATH
-    and build_vars.PROJECT_FILE_PATH
-  then
-    local target = {
-      name = build_vars.PRODUCT_NAME,
-      bundle_id = build_vars.PRODUCT_BUNDLE_IDENTIFIER,
-      module_name = build_vars.PRODUCT_MODULE_NAME,
-      plist = build_vars.PRODUCT_SETTINGS_PATH,
-      project = {
-        name = build_vars.PROJECT,
-        path = build_vars.PROJECT_FILE_PATH,
-        type = "project",
-      },
-    }
-    return target
-  end
-  return nil
 end
 
 ---Parse the output of `` into a table of build settings

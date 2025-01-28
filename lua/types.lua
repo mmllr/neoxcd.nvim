@@ -20,14 +20,15 @@
 
 ---A class representing a Xcode project
 ---@class Project
----@field name string|nil
+---@field name? string
 ---@field path string
 ---@field type ProjectType
+---@field scheme? string
+---@field destination? Destination
 
 ---A class representing a build target
 ---@class Target
 ---@field name string
----@field project Project
 ---@field bundle_id string
 ---@field plist string
 ---@field module_name string

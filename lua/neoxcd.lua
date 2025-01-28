@@ -1,11 +1,10 @@
 local spinner = require("spinner")
 local nio = require("nio")
+local project = require("project")
 local util = require("util")
 local xcode = require("xcode")
-local destination_mapping = {}
+local buildserver = require("xcodebuildserver")
 local selected_scheme = nil
----@type string[]
-local build_output = {}
 
 ---@async
 ---@param directory string
@@ -42,60 +41,6 @@ local load_schemes = function(opts)
   return output
 end
 
---- Returns the path to the Xcode workspace or project or Package.swift file in the current directory
----@async
----@return Project|nil
-local function project_file()
-  local files = vim.fs.find(function(name, path)
-    return vim.endswith(name, ".xcworkspace") or vim.endswith(name, ".xcodeproj") or vim.endswith(name, "Package.swift")
-  end, { limit = 3 })
-
-  for _, file in ipairs(files) do
-    if vim.endswith(file, "xcworkspace") then
-      return { path = file, type = "workspace" }
-    end
-  end
-  for _, file in ipairs(files) do
-    if vim.endswith(file, "xcodeproj") then
-      return { path = file, type = "project" }
-    end
-  end
-  for _, file in ipairs(files) do
-    if vim.endswith(file, "Package.swift") then
-      return { path = file, type = "package" }
-    end
-  end
-  return nil
-end
-
---- Find the Xcode workspace or project file in the current directory
---- When no result is found, return empty table (Swift package projects do not have a workspace or project file)
----@async
----@return table|nil
-local function find_build_options()
-  local project = project_file()
-  if project ~= nil then
-    if project.type == "package" then
-      return {}
-    end
-    local type = project.type
-    return { "-" .. type, project.path }
-  end
-  return nil
-end
-
----@async
-local function update_xcode_build_config(scheme, opts)
-  local build = nio.process.run({
-    cmd = "xcode-build-server",
-    args = util.concat({ "config", "-scheme", scheme }, opts or {}),
-  })
-  if build == nil then
-    return false
-  end
-  return build.result(true) == 0
-end
-
 local function show_ui(schemes, opts, callback)
   vim.ui.select(schemes, opts, callback)
 end
@@ -120,23 +65,6 @@ local function run_external_cmd(cmd, args, detached)
   result.close()
   return output
 end
-
----@param callback function
-local function buildit(cmd, callback)
-  ---@type vim.SystemOpts
-  vim.system(cmd, {
-    text = true,
-    stdout = function(err, data)
-      if data then
-        xcode.parse_quickfix_list(data)
-      end
-    end,
-  }, function(obj)
-    callback(obj.code)
-  end)
-end
-
-local buildit_async = nio.wrap(buildit, 2)
 
 ---@async
 local function run_build(cmd, args)
@@ -186,7 +114,7 @@ local select_schemes = function()
     if #opts == 0 then
       success = true
     else
-      success = update_xcode_build_config(selection, opts)
+      success = buildserver.update_xcode_build_server(selection, opts)
     end
     selected_scheme = selection
     nio.scheduler()
@@ -261,44 +189,12 @@ end
 ---Builds the project
 ---@async
 local function build()
-  local opts = find_build_options()
-  if opts == nil then
-    vim.notify("No Xcode project or workspace found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-    return
-  end
-  local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
-  nio.scheduler()
-  if destination_mapping[scheme] == nil then
-    vim.notify(
-      "No destination selected, use Neoxcd destination to choose a destination",
-      vim.log.levels.ERROR,
-      { id = "Neoxcd", title = "Neoxcd" }
-    )
-    return
-  end
   local start_time = os.time()
-  spinner.start("Building " .. scheme .. "...")
-  --- TODO: query available configurations instead of hardcoding "Debug"
-  local cmd = {
-    "xcodebuild",
-    "build",
-    "-scheme",
-    scheme,
-    "-destination",
-    util.format_destination_for_build(destination_mapping[scheme]),
-    "-configuration",
-    "Debug",
-    -- "-quiet",
-  }
-  local code = buildit_async(cmd)
+  local code = xcode.build()
   nio.scheduler()
-  spinner.stop()
   if code == 0 then
     local end_time = os.time()
-    local msg = string.format(
-      "Build succeeded in %.2f seconds, target: " .. vim.inspect(xcode.build_target()),
-      os.difftime(end_time, start_time)
-    )
+    local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
     vim.notify(msg, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   else
     vim.notify("Build failed", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
@@ -355,6 +251,7 @@ end
 return {
   current_scheme = current_scheme,
   setup = nio.create(function()
+    project.load()
     local scheme = current_scheme(nio.fn.getcwd())
     if scheme then
       selected_scheme = scheme
