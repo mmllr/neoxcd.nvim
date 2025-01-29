@@ -76,15 +76,17 @@ end
 
 ---Parse the product after a successful build
 local function update_build_target()
-  if project.currernt_project == nil then
+  if project.current_project == nil then
     return
   end
+  if build.variables.PROJECT and build.variables.PROJECT_FILE_PATH then
+    project.current_project.name = build.variables.PROJECT
+    project.current_project.path = build.variables.PROJECT_FILE_PATH
+  end
   if
-    build.variables.PROJECT
-    and build.variables.PRODUCT_NAME
+    build.variables.PRODUCT_NAME
     and build.variables.PRODUCT_BUNDLE_IDENTIFIER
     and build.variables.PRODUCT_SETTINGS_PATH
-    and build.variables.PROJECT_FILE_PATH
   then
     project.current_target = {
       name = build.variables.PRODUCT_NAME,
@@ -92,24 +94,15 @@ local function update_build_target()
       module_name = build.variables.PRODUCT_MODULE_NAME,
       plist = build.variables.PRODUCT_SETTINGS_PATH,
     }
-    project.current_project.name = build.variables.PROJECT
-    project.current_project.path = build.variables.PROJECT_FILE_PATH
   end
 end
 
 ---@param callback fun(code: number)
 local function run_build(cmd, callback)
-  ---@type vim.SystemOpts
-  vim.system(cmd, {
-    text = true,
-    stdout = function(err, data)
-      if data then
-        M.add_build_log(data)
-      end
-    end,
-    detach = true,
-  }, function(obj)
-    callback(obj.code)
+  util.run_job(cmd, callback, function(_, data)
+    if data then
+      M.add_build_log(data)
+    end
   end)
 end
 
@@ -140,10 +133,10 @@ function M.build()
     "Debug",
     -- "-quiet",
   }
-  spinner.start("Building " .. project.current_project.scheme .. "...")
+  -- spinner.start("Building " .. project.current_project.scheme .. "...")
   local result = nio.wrap(run_build, 2)(cmd)
   update_build_target()
-  spinner.stop()
+  -- spinner.stop()
   return result
 end
 
@@ -155,6 +148,7 @@ function M.add_build_log(line)
   end
   table.insert(build.log, line)
   parse_exported_variables(line)
+  update_build_target()
 end
 
 ---Parse the output of `xcodebuild -list -json` into a table of schemes

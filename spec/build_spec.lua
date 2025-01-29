@@ -1,4 +1,7 @@
+local nio = require("nio")
+
 describe("Build logic", function()
+  local project = require("project")
   it("parses logs without build errors", function()
     local logs = [[
 LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
@@ -50,8 +53,24 @@ note: Run script build phase 'Build number from git' will be run during every bu
     assert.are.same(expected, require("xcode").parse_quickfix_list(logs))
   end)
 
-  it("Parses the project settings", function()
+  ---@param scheme string
+  local function givenProject(scheme)
+    project.current_project = {
+      path = "",
+      type = "project",
+    }
+    project.current_project.scheme = scheme
+    project.current_project.destination = {
+      platform = "iOS",
+      id = "id",
+      name = "name",
+    }
+  end
+
+  nio.tests.it("Parses the project settings", function()
+    local util = require("util")
     local sut = require("xcode")
+    givenProject("scheme")
     local log = [[
     export PRODUCT_BUNDLE_IDENTIFIER\=com.product.myproduct
     export PRODUCT_BUNDLE_PACKAGE_TYPE\=APPL
@@ -64,27 +83,31 @@ note: Run script build phase 'Build number from git' will be run during every bu
     export PROJECT_DERIVED_FILE_DIR\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources
     export PROJECT_DIR\=/Users/user/MyProject
     export PROJECT_FILE_PATH\=/Users/user/MyProject/MyProject.xcodeproj
-    export PROJECT_GUID\=679ad98a1d3d4fc98c1821c175190d3f
+    export PROJECT_GUID\=ad98a1d3d4fc98c1821c175190d3f
     export PROJECT_NAME\=MyProject
     export PROJECT_TEMP_DIR\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build
     export PROJECT_TEMP_ROOT\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex
       ]]
 
-    for line in string.gmatch(log, "[^\r\n]+") do
-      sut.add_build_log(line)
+    local invoked_cmd = {}
+    util.run_job = function(cmd, on_exit, on_stdout)
+      invoked_cmd = cmd
+      for line in string.gmatch(log, "[^\r\n]+") do
+        on_stdout(nil, line)
+      end
+      on_exit(0)
     end
-    ---@type Target
-    local expected = {
-      name = "MyProduct",
-      bundle_id = "com.product.myproduct",
-      module_name = "MyProduct-Folder",
-      plist = "/Users/user/MyProject-Folder/MyProduct/Info.plist",
-      project = {
-        name = "MyProject",
-        path = "/Users/user/MyProject/MyProject.xcodeproj",
-        type = "project",
-      },
-    }
-    assert.are.same(expected, sut.build_target())
+
+    assert.are.same(0, sut.build())
+    assert.are.same(
+      { "xcodebuild", "build", "-scheme", "scheme", "-destination", "platform=iOS,id=id", "-configuration", "Debug" },
+      invoked_cmd
+    )
+    assert.are.same("/Users/user/MyProject/MyProject.xcodeproj", project.current_project.path)
+    assert.are.same("MyProject", project.current_project.name)
+    assert.are.same("MyProduct", project.current_target.name)
+    assert.are.same("com.product.myproduct", project.current_target.bundle_id)
+    assert.are.same("/Users/user/MyProject-Folder/MyProduct/Info.plist", project.current_target.plist)
+    assert.are.same("MyProduct-Folder", project.current_target.module_name)
   end)
 end)

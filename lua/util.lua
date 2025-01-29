@@ -1,6 +1,8 @@
 local nio = require("nio")
-
 local M = {}
+
+---@class ExternalCommand
+---@dfield execute fun(cmd: string[], on_exit: fun(code: number), on_stdout: fun(error: string, data: string))
 
 ---Find files with a specific extension in a directory
 ---@param extension string
@@ -10,6 +12,19 @@ function M.find_files_with_extension(extension, directory)
   local pattern = directory .. "/*." .. extension
   local files = nio.fn.glob(pattern, false, true) -- Get a list of files
   return files
+end
+
+---Helper for executing external commands
+---@param cmd string[]
+---@param on_exit fun(code: number)
+---@param on_stdout fun(error: string?, data: string?)
+function M.run_job(cmd, on_exit, on_stdout)
+  vim.system(cmd, {
+    text = true,
+    stdout = on_stdout,
+  }, function(obj)
+    on_exit(obj.code)
+  end)
 end
 
 ---Concatenate two tables
@@ -79,8 +94,9 @@ end
 function M.format_destination_for_build(destination)
   local keys = { "platform", "arch", "id" }
   local parts = {}
-  for k, v in pairs(destination) do
-    if vim.tbl_contains(keys, k) then
+  for _, k in ipairs(keys) do
+    local v = destination[k]
+    if v ~= nil then
       table.insert(parts, k .. "=" .. v)
     end
   end
