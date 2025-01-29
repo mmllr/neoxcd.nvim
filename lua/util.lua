@@ -16,15 +16,13 @@ end
 
 ---Helper for executing external commands
 ---@param cmd string[]
----@param on_exit fun(code: number)
----@param on_stdout fun(error: string?, data: string?)
+---@param on_exit fun(obj: vim.SystemCompleted)
+---@param on_stdout fun(error: string?, data: string?)|nil
 function M.run_job(cmd, on_exit, on_stdout)
   vim.system(cmd, {
     text = true,
-    stdout = on_stdout,
-  }, function(obj)
-    on_exit(obj.code)
-  end)
+    stdout = on_stdout or false,
+  }, on_exit)
 end
 
 ---Concatenate two tables

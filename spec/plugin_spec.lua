@@ -1,5 +1,16 @@
 describe("Scheme parsing", function()
-  it("Parsing output from workspace", function()
+  local util = require("util")
+  local nio = require("nio")
+  local project = require("project")
+
+  local function givenProject()
+    project.current_project = {
+      type = "workspace",
+      path = "project.xcworkspace",
+      schemes = {},
+    }
+  end
+  nio.tests.it("Parsing output from workspace", function()
     local json = [[
 {
   "workspace" : {
@@ -23,6 +34,16 @@ describe("Scheme parsing", function()
   }
 }
   ]]
+    local invoked_cmd = {}
+    util.run_job = function(cmd, on_exit)
+      invoked_cmd = cmd
+      on_exit({
+        signal = 0,
+        stdout = json,
+        code = 0,
+      })
+    end
+    givenProject()
     local expected = {
       "CaseStudies (SwiftUI)",
       "CaseStudies (UIKit)",
@@ -40,7 +61,11 @@ describe("Scheme parsing", function()
       "VoiceMemos",
     }
     local xcode = require("xcode")
-    assert.are.same(expected, xcode.parse_schemes(json))
+
+    xcode.load_schemes()
+
+    assert.are.same({ "xcodebuild", "-list", "-json", "-workspace", "project.xcworkspace" }, invoked_cmd)
+    assert.are.same(expected, project.current_project.schemes)
   end)
 
   it("Parsing output from project", function()

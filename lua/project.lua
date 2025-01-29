@@ -14,19 +14,19 @@ function M.load()
 
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcworkspace") then
-      M.current_project = { path = file, type = "workspace" }
+      M.current_project = { path = file, type = "workspace", schemes = {} }
       return
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcodeproj") then
-      M.current_project = { path = file, type = "project" }
+      M.current_project = { path = file, type = "project", schemes = {} }
       return
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "Package.swift") then
-      M.current_project = { path = file, type = "package" }
+      M.current_project = { path = file, type = "package", schemes = {} }
       return
     end
   end
@@ -40,8 +40,7 @@ function M.build_options_for_project(project)
   if project.type == "package" then
     return {}
   end
-  local type = project.type
-  return { "-" .. type, project.path }
+  return { "-" .. project.type, project.path }
 end
 
 --- Find the Xcode workspace or project file in the current directory

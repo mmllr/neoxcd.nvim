@@ -25,6 +25,7 @@
 ---@field type ProjectType
 ---@field scheme? string
 ---@field destination? Destination
+---@field schemes string[]
 
 ---A class representing a build target
 ---@class Target

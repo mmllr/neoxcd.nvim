@@ -1,7 +1,22 @@
 local nio = require("nio")
+local project = require("project")
+
+---@param scheme string
+local function givenProject(scheme)
+  project.current_project = {
+    path = "",
+    type = "project",
+    schemes = { scheme },
+  }
+  project.current_project.scheme = scheme
+  project.current_project.destination = {
+    platform = "iOS",
+    id = "id",
+    name = "name",
+  }
+end
 
 describe("Build logic", function()
-  local project = require("project")
   it("parses logs without build errors", function()
     local logs = [[
 LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
@@ -53,20 +68,6 @@ note: Run script build phase 'Build number from git' will be run during every bu
     assert.are.same(expected, require("xcode").parse_quickfix_list(logs))
   end)
 
-  ---@param scheme string
-  local function givenProject(scheme)
-    project.current_project = {
-      path = "",
-      type = "project",
-    }
-    project.current_project.scheme = scheme
-    project.current_project.destination = {
-      platform = "iOS",
-      id = "id",
-      name = "name",
-    }
-  end
-
   nio.tests.it("Parses the project settings", function()
     local util = require("util")
     local sut = require("xcode")
@@ -95,7 +96,9 @@ note: Run script build phase 'Build number from git' will be run during every bu
       for line in string.gmatch(log, "[^\r\n]+") do
         on_stdout(nil, line)
       end
-      on_exit(0)
+      on_exit({
+        code = 0,
+      })
     end
 
     assert.are.same(0, sut.build())

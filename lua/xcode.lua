@@ -1,7 +1,6 @@
 local nio = require("nio")
 local util = require("util")
 local project = require("project")
-local spinner = require("spinner")
 local M = {}
 
 ---@private
@@ -97,7 +96,7 @@ local function update_build_target()
   end
 end
 
----@param callback fun(code: number)
+---@param callback fun(code: vim.SystemCompleted)
 local function run_build(cmd, callback)
   util.run_job(cmd, callback, function(_, data)
     if data then
@@ -137,7 +136,7 @@ function M.build()
   local result = nio.wrap(run_build, 2)(cmd)
   update_build_target()
   -- spinner.stop()
-  return result
+  return result.code
 end
 
 ---Adds a line from the xcodebuild output to the build log
@@ -149,6 +148,15 @@ function M.add_build_log(line)
   table.insert(build.log, line)
   parse_exported_variables(line)
   update_build_target()
+end
+
+function M.load_schemes()
+  local p = project.current_project
+  if p == nil then
+    return
+  end
+  local opts = project.build_options_for_project(p)
+  util.run_job(util.concat({ "xcodebuild", "-list", "-json" }, opts), function(code) end)
 end
 
 ---Parse the output of `xcodebuild -list -json` into a table of schemes
