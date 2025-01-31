@@ -96,11 +96,37 @@ local function update_build_target()
   end
 end
 
+---Adds a line from the xcodebuild output to the build log
+---@param line string
+local function add_build_log(line)
+  if build.log == nil then
+    build.log = {}
+  end
+  table.insert(build.log, line)
+  parse_exported_variables(line)
+  update_build_target()
+end
+
+---@param line string
+local function add_quickfix(line)
+  if not project.current_project then
+    return
+  end
+  if project.current_project.quickfixes == nil then
+    project.current_project.quickfixes = {}
+  end
+  local entry = parse_error_message(line)
+  if entry then
+    table.insert(project.current_project.quickfixes, entry)
+  end
+end
+
 ---@param callback fun(code: vim.SystemCompleted)
 local function run_build(cmd, callback)
   util.run_job(cmd, callback, function(_, data)
     if data then
-      M.add_build_log(data)
+      add_build_log(data)
+      add_quickfix(data)
     end
   end)
 end
@@ -161,17 +187,6 @@ function M.build()
   return result.code
 end
 
----Adds a line from the xcodebuild output to the build log
----@param line string
-function M.add_build_log(line)
-  if build.log == nil then
-    build.log = {}
-  end
-  table.insert(build.log, line)
-  parse_exported_variables(line)
-  update_build_target()
-end
-
 ---Load the schemes for the current project
 ---@async
 ---@return number
@@ -186,20 +201,6 @@ function M.load_schemes()
     project.current_project.schemes = parse_schemes(result.stdout)
   end
   return result.code
-end
-
----Parse the output of `` into a table of build settings
----@param input string
----@return QuickfixEntry[]
-function M.parse_quickfix_list(input)
-  local results = {}
-  local lines = vim.split(input, "\n", { trimempty = true })
-  for _, line in ipairs(lines) do
-    if parse_error_message(line) then
-      table.insert(results, parse_error_message(line))
-    end
-  end
-  return results
 end
 
 ---Parse the output of `xcodebuild -showdestinations` into a table of destinations

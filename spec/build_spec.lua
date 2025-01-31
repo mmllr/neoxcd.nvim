@@ -1,25 +1,53 @@
 local nio = require("nio")
 local project = require("project")
-
+local util = require("util")
+local sut = require("xcode")
 local it = nio.tests.it
----@param scheme string
-local function givenProject(scheme)
-  project.current_project = {
-    path = "",
-    type = "project",
-    schemes = { scheme },
-    destinations = {},
-  }
-  project.current_project.scheme = scheme
-  project.current_project.destination = {
-    platform = "iOS",
-    id = "id",
-    name = "name",
-  }
-end
 
 describe("Build logic", function()
+  local invoked_cmd = {}
+  ---@param code number|nil
+  ---@param output string
+  local function stub_run_job(code, output)
+    --- @diagnostic disable-next-line: duplicate-set-field
+    util.run_job = function(cmd, on_exit, on_stdout)
+      invoked_cmd = cmd
+      for line in string.gmatch(output, "[^\r\n]+") do
+        if on_stdout then
+          on_stdout(nil, line)
+        end
+      end
+      on_exit({
+        signal = 0,
+        code = code or 0,
+        stdout = output,
+      })
+    end
+  end
+
+  ---@param scheme string
+  local function givenProject(scheme)
+    project.current_project = {
+      path = "",
+      type = "project",
+      schemes = { scheme },
+      destinations = {},
+    }
+    project.current_project.scheme = scheme
+    project.current_project.destination = {
+      platform = "iOS",
+      id = "id",
+      name = "name",
+    }
+  end
+
+  before_each(function()
+    invoked_cmd = {}
+    project.current_project = nil
+  end)
+
   it("parses logs without build errors", function()
+    givenProject("scheme")
     local logs = [[
 LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
 LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
@@ -42,6 +70,7 @@ LLVM Profile Error: Failed to write file "default.profraw": Operation not permit
 note: Run script build phase 'Build number from git' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'CantatasEditor' from project 'Cantatas')
       ]]
 
+    stub_run_job(0, logs)
     ---@type QuickfixEntry[]
     local expected = {
       {
@@ -67,12 +96,11 @@ note: Run script build phase 'Build number from git' will be run during every bu
       },
     }
 
-    assert.are.same(expected, require("xcode").parse_quickfix_list(logs))
+    assert.are.same(0, sut.build())
+    assert.are.same(expected, project.current_project.quickfixes)
   end)
 
   it("Parses the project settings", function()
-    local util = require("util")
-    local sut = require("xcode")
     givenProject("scheme")
     local log = [[
     export PRODUCT_BUNDLE_IDENTIFIER\=com.product.myproduct
@@ -92,20 +120,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
     export PROJECT_TEMP_ROOT\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex
       ]]
 
-    local invoked_cmd = {}
-    --- @diagnostic disable-next-line: duplicate-set-field
-    util.run_job = function(cmd, on_exit, on_stdout)
-      invoked_cmd = cmd
-      for line in string.gmatch(log, "[^\r\n]+") do
-        if on_stdout then
-          on_stdout(nil, line)
-        end
-      end
-      on_exit({
-        signal = 0,
-        code = 0,
-      })
-    end
+    stub_run_job(0, log)
 
     assert.are.same(0, sut.build())
     assert.are.same(

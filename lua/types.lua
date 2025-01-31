@@ -27,6 +27,7 @@
 ---@field destination? Destination
 ---@field schemes string[]
 ---@field destinations Destination[]
+---@field quickfixes? QuickfixEntry[]
 
 ---A class representing a build target
 ---@class Target
