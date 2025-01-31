@@ -156,7 +156,11 @@ function M.load_schemes()
     return
   end
   local opts = project.build_options_for_project(p)
-  util.run_job(util.concat({ "xcodebuild", "-list", "-json" }, opts), function(code) end)
+  util.run_job(util.concat({ "xcodebuild", "-list", "-json" }, opts), function(obj)
+    if obj.code == 0 and obj.stdout then
+      project.current_project.schemes = M.parse_schemes(obj.stdout)
+    end
+  end)
 end
 
 ---Parse the output of `xcodebuild -list -json` into a table of schemes
