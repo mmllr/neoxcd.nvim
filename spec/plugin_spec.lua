@@ -22,7 +22,9 @@ describe("neoxcd plugin", function()
   ---@param code number
   ---@param output string
   local function stub_external_cmd(code, output)
-    previous_run_job = util.run_job
+    if not previous_run_job then
+      previous_run_job = util.run_job
+    end
     --- @diagnostic disable-next-line: duplicate-set-field
     util.run_job = function(cmd, on_exit)
       invoked_cmd = cmd
@@ -36,6 +38,7 @@ describe("neoxcd plugin", function()
 
   teardown(function()
     util.run_job = previous_run_job
+    previous_run_job = nil
     project = nil
     xcdoe = nil
   end)
