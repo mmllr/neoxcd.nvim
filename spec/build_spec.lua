@@ -10,7 +10,7 @@ describe("Build logic", function()
   ---@param output string
   local function stub_run_job(code, output)
     --- @diagnostic disable-next-line: duplicate-set-field
-    util.run_job = function(cmd, on_exit, on_stdout)
+    util.run_job = function(cmd, on_stdout, on_exit)
       invoked_cmd = cmd
       for line in string.gmatch(output, "[^\r\n]+") do
         if on_stdout then

@@ -27,7 +27,7 @@ describe("neoxcd plugin", function()
       previous_run_job = util.run_job
     end
     --- @diagnostic disable-next-line: duplicate-set-field
-    util.run_job = function(cmd, on_exit)
+    util.run_job = function(cmd, _, on_exit)
       invoked_cmd = cmd
       on_exit({
         signal = 0,

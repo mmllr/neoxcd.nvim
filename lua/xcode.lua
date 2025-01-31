@@ -123,12 +123,12 @@ end
 
 ---@param callback fun(code: vim.SystemCompleted)
 local function run_build(cmd, callback)
-  util.run_job(cmd, callback, function(_, data)
+  util.run_job(cmd, function(_, data)
     if data then
       add_build_log(data)
       add_quickfix(data)
     end
-  end)
+  end, callback)
 end
 
 ---Parse the output of `xcodebuild -list -json` into a table of schemes
@@ -136,6 +136,7 @@ end
 ---@return string[]
 local function parse_schemes(input)
   local schemes = {}
+  -- vim.notify(input, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   local data = vim.json.decode(input)
   if data then
     local parent_key
@@ -196,8 +197,12 @@ function M.load_schemes()
     return -1
   end
   local opts = project.build_options_for_project(p)
-  local result = nio.wrap(util.run_job, 2)(util.concat({ "xcodebuild", "-list", "-json" }, opts))
-  if result.code == 0 and result.stdout then
+  local cmd = util.concat({ "xcodebuild", "-list", "-json" }, opts)
+  vim.notify(vim.inspect(cmd), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+  local result = nio.wrap(util.run_job, 3)(cmd, nil)
+  vim.notify(vim.inspect(result), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+  if result.code == 0 and result.stdout ~= nil then
+    -- vim.notify(result.stdout, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
     project.current_project.schemes = parse_schemes(result.stdout)
   end
   return result.code
@@ -230,8 +235,10 @@ function M.load_destinations()
   end
 
   local opts = project.build_options_for_project(p)
-  local result =
-    nio.wrap(util.run_job, 2)(util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts))
+  local result = nio.wrap(util.run_job, 3)(
+    util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts),
+    nil
+  )
   if result.code == 0 and result.stdout then
     project.current_project.destinations = parse_destinations(result.stdout)
   end
@@ -248,7 +255,8 @@ function M.select_scheme(scheme)
     return -1
   end
   local opts = project.build_options_for_project(p)
-  local result = nio.wrap(util.run_job, 2)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts))
+  local result =
+    nio.wrap(util.run_job, 3)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
   if result.code == 0 then
     project.current_project.scheme = scheme
   end

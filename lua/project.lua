@@ -10,23 +10,23 @@ M.current_target = nil
 function M.load()
   local files = vim.fs.find(function(name, path)
     return vim.endswith(name, ".xcworkspace") or vim.endswith(name, ".xcodeproj") or vim.endswith(name, "Package.swift")
-  end, { limit = 3 })
+  end, { limit = 1 })
 
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcworkspace") then
-      M.current_project = { path = file, type = "workspace", schemes = {} }
+      M.current_project = { path = file, type = "workspace", schemes = {}, destinations = {} }
       return
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcodeproj") then
-      M.current_project = { path = file, type = "project", schemes = {} }
+      M.current_project = { path = file, type = "project", schemes = {}, destinations = {} }
       return
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "Package.swift") then
-      M.current_project = { path = file, type = "package", schemes = {} }
+      M.current_project = { path = file, type = "package", schemes = {}, destinations = {} }
       return
     end
   end

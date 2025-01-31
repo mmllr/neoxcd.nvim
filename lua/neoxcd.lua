@@ -3,8 +3,6 @@ local nio = require("nio")
 local project = require("project")
 local util = require("util")
 local xcode = require("xcode")
-local buildserver = require("xcodebuildserver")
-local selected_scheme = nil
 
 ---@async
 ---@param directory string
@@ -25,20 +23,6 @@ local function current_scheme(directory)
   else
     return nil
   end
-end
-
----@async
-local load_schemes = function(opts)
-  local build = nio.process.run({
-    cmd = "xcodebuild",
-    args = util.concat({ "-list", "-json" }, opts or {}),
-  })
-  if build == nil then
-    return nil
-  end
-  local output = build.stdout.read()
-  build.close()
-  return output
 end
 
 local function show_ui(schemes, opts, callback)
@@ -67,21 +51,6 @@ local function run_external_cmd(cmd, args, detached)
 end
 
 ---@async
-local function run_build(cmd, args)
-  local buildLog = nio.file.open(nio.fn.getcwd() .. "/build.log", "w")
-  local result = nio.process.run({
-    cmd = cmd,
-    args = args,
-    stdout = buildLog,
-  })
-  if result == nil then
-    return -1, nil
-  end
-  local retval, _ = result.result(true)
-  return retval
-end
-
----@async
 local function show_destinations(scheme, opts)
   local output =
     run_external_cmd("xcodebuild", util.concat({ "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}))
@@ -96,34 +65,29 @@ end
 ---@async
 local select_schemes = function()
   spinner.start("Loading schemes...")
-  local opts = find_build_options()
-  local output = load_schemes(opts)
+  local result = xcode.load_schemes()
   nio.scheduler()
   spinner.stop()
-  if output == nil or opts == nil then
+  local schemes = project.current_project.schemes
+  if result ~= 0 or #schemes == 0 then
     vim.notify("No schemes found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     return
+  else
+    vim.notify("Found " .. #schemes .. " schemes", vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   end
-  local schemes = xcode.parse_schemes(output)
   local selection = select_async(schemes, {
     prompt = "Select a scheme",
   })
-  if selection then
+  if selection ~= nil then
     spinner.start("Updating xcode-build-server config...")
-    local success
-    if #opts == 0 then
-      success = true
-    else
-      success = buildserver.update_xcode_build_server(selection, opts)
-    end
-    selected_scheme = selection
-    nio.scheduler()
-    spinner.stop()
-    if success then
-      vim.notify("Selected scheme: " .. selection, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
-    else
-      vim.notify("Failed to select scheme: " .. selection, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-    end
+    result = xcode.select_scheme(selection)
+  end
+  nio.scheduler()
+  spinner.stop()
+  if result == 0 then
+    vim.notify("Selected scheme: " .. selection, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+  else
+    vim.notify("Failed to select scheme: " .. selection, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
   end
 end
 
@@ -250,13 +214,9 @@ end
 
 return {
   current_scheme = current_scheme,
-  setup = nio.create(function()
+  setup = function(options)
     project.load()
-    local scheme = current_scheme(nio.fn.getcwd())
-    if scheme then
-      selected_scheme = scheme
-    end
-  end),
+  end,
   clean = nio.create(clean),
   build = nio.create(build),
   select_schemes = nio.create(select_schemes),
