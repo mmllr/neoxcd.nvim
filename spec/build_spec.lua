@@ -1,12 +1,14 @@
 local nio = require("nio")
 local project = require("project")
 
+local it = nio.tests.it
 ---@param scheme string
 local function givenProject(scheme)
   project.current_project = {
     path = "",
     type = "project",
     schemes = { scheme },
+    destinations = {},
   }
   project.current_project.scheme = scheme
   project.current_project.destination = {
@@ -68,7 +70,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
     assert.are.same(expected, require("xcode").parse_quickfix_list(logs))
   end)
 
-  nio.tests.it("Parses the project settings", function()
+  it("Parses the project settings", function()
     local util = require("util")
     local sut = require("xcode")
     givenProject("scheme")

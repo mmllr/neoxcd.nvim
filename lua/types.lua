@@ -26,6 +26,7 @@
 ---@field scheme? string
 ---@field destination? Destination
 ---@field schemes string[]
+---@field destinations Destination[]
 
 ---A class representing a build target
 ---@class Target

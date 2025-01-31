@@ -105,6 +105,28 @@ local function run_build(cmd, callback)
   end)
 end
 
+---Parse the output of `xcodebuild -list -json` into a table of schemes
+---@param input string
+---@return string[]
+local function parse_schemes(input)
+  local schemes = {}
+  local data = vim.json.decode(input)
+  if data then
+    local parent_key
+    if data["project"] ~= nil then
+      parent_key = "project"
+    elseif data["workspace"] ~= nil then
+      parent_key = "workspace"
+    end
+    if parent_key and data[parent_key]["schemes"] ~= nil then
+      for _, scheme in ipairs(data[parent_key]["schemes"]) do
+        table.insert(schemes, scheme)
+      end
+    end
+  end
+  return schemes
+end
+
 ---Builds the target
 ---@async
 ---@return number
@@ -150,39 +172,20 @@ function M.add_build_log(line)
   update_build_target()
 end
 
+---Load the schemes for the current project
+---@async
+---@return number
 function M.load_schemes()
   local p = project.current_project
-  if p == nil then
-    return
+  if not p then
+    return -1
   end
   local opts = project.build_options_for_project(p)
-  util.run_job(util.concat({ "xcodebuild", "-list", "-json" }, opts), function(obj)
-    if obj.code == 0 and obj.stdout then
-      project.current_project.schemes = M.parse_schemes(obj.stdout)
-    end
-  end)
-end
-
----Parse the output of `xcodebuild -list -json` into a table of schemes
----@param input string
----@return string[]
-function M.parse_schemes(input)
-  local schemes = {}
-  local data = vim.json.decode(input)
-  if data then
-    local parent_key
-    if data["project"] ~= nil then
-      parent_key = "project"
-    elseif data["workspace"] ~= nil then
-      parent_key = "workspace"
-    end
-    if parent_key and data[parent_key]["schemes"] ~= nil then
-      for _, scheme in ipairs(data[parent_key]["schemes"]) do
-        table.insert(schemes, scheme)
-      end
-    end
+  local result = nio.wrap(util.run_job, 2)(util.concat({ "xcodebuild", "-list", "-json" }, opts))
+  if result.code == 0 and result.stdout then
+    project.current_project.schemes = parse_schemes(result.stdout)
   end
-  return schemes
+  return result.code
 end
 
 ---Parse the output of `` into a table of build settings
@@ -202,7 +205,7 @@ end
 ---Parse the output of `xcodebuild -showdestinations` into a table of destinations
 ---@param text string
 ---@return Destination[]
-function M.parse_destinations(text)
+local function parse_destinations(text)
   local destinations = {}
 
   for block in text:gmatch("{(.-)}") do
@@ -214,6 +217,24 @@ function M.parse_destinations(text)
   end
 
   return destinations
+end
+
+---Loads selects a destination for the current scheme
+---@async
+---@return number
+function M.load_destinations()
+  local p = project.current_project
+  if not p or not p.scheme then
+    return -1
+  end
+
+  local opts = project.build_options_for_project(p)
+  local result =
+    nio.wrap(util.run_job, 2)(util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts))
+  if result.code == 0 and result.stdout then
+    project.current_project.destinations = parse_destinations(result.stdout)
+  end
+  return result.code
 end
 
 return M
