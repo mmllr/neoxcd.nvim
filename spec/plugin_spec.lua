@@ -35,6 +35,7 @@ describe("Scheme parsing", function()
 }
   ]]
     local invoked_cmd = {}
+    --- @diagnostic disable-next-line: duplicate-set-field
     util.run_job = function(cmd, on_exit)
       invoked_cmd = cmd
       on_exit({

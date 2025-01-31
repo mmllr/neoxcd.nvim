@@ -91,12 +91,16 @@ note: Run script build phase 'Build number from git' will be run during every bu
       ]]
 
     local invoked_cmd = {}
+    --- @diagnostic disable-next-line: duplicate-set-field
     util.run_job = function(cmd, on_exit, on_stdout)
       invoked_cmd = cmd
       for line in string.gmatch(log, "[^\r\n]+") do
-        on_stdout(nil, line)
+        if on_stdout then
+          on_stdout(nil, line)
+        end
       end
       on_exit({
+        signal = 0,
         code = 0,
       })
     end
