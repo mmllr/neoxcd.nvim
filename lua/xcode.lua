@@ -238,4 +238,21 @@ function M.load_destinations()
   return result.code
 end
 
+---selects a scheme
+---@async
+---@param scheme string
+---@return number
+function M.select_scheme(scheme)
+  local p = project.current_project
+  if not p or not p.schemes and not vim.list_contains(p.schemes, scheme) then
+    return -1
+  end
+  local opts = project.build_options_for_project(p)
+  local result = nio.wrap(util.run_job, 2)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts))
+  if result.code == 0 then
+    project.current_project.scheme = scheme
+  end
+  return result.code
+end
+
 return M

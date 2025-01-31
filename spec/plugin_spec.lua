@@ -8,11 +8,12 @@ describe("neoxcd plugin", function()
 
   ---@param type ProjectType
   ---@param scheme string|nil
-  local function givenProject(type, scheme)
+  ---@param schemes string[]|nil
+  local function givenProject(type, scheme, schemes)
     project.current_project = {
       type = type,
       path = type == "project" and "project.xcodeproj" or "project.xcworkspace",
-      schemes = {},
+      schemes = schemes or {},
       scheme = scheme,
       destinations = {},
     }
@@ -48,7 +49,7 @@ describe("neoxcd plugin", function()
     project.current_project = nil
   end)
 
-  describe("Scheme parsing", function()
+  describe("Scheme handling", function()
     it("Parsing output from workspace", function()
       local json = [[
 {
@@ -129,6 +130,18 @@ describe("neoxcd plugin", function()
 
       assert.are.same({ "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, invoked_cmd)
       assert.are.same(expected, project.current_project.schemes)
+    end)
+
+    it("Selectin a scheme will update the xcode build server", function()
+      givenProject("project", nil, { "schemeA", "SchemeB", "schemeC" })
+      stub_external_cmd(0, "")
+
+      assert.are.same(0, xcode.select_scheme("schemeB"))
+      assert.are.same(
+        { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" },
+        invoked_cmd
+      )
+      assert.are.same("schemeB", project.current_project.scheme)
     end)
   end)
 
