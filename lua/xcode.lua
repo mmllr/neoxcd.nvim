@@ -136,7 +136,6 @@ end
 ---@return string[]
 local function parse_schemes(input)
   local schemes = {}
-  -- vim.notify(input, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   local data = vim.json.decode(input)
   if data then
     local parent_key
@@ -181,10 +180,8 @@ function M.build()
     "Debug",
     -- "-quiet",
   }
-  -- spinner.start("Building " .. project.current_project.scheme .. "...")
   local result = nio.wrap(run_build, 2)(cmd)
   update_build_target()
-  -- spinner.stop()
   return result.code
 end
 
@@ -197,12 +194,8 @@ function M.load_schemes()
     return -1
   end
   local opts = project.build_options_for_project(p)
-  local cmd = util.concat({ "xcodebuild", "-list", "-json" }, opts)
-  vim.notify(vim.inspect(cmd), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
-  local result = nio.wrap(util.run_job, 3)(cmd, nil)
-  vim.notify(vim.inspect(result), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+  local result = nio.wrap(util.run_job, 3)(util.concat({ "xcodebuild", "-list", "-json" }, opts), nil)
   if result.code == 0 and result.stdout ~= nil then
-    -- vim.notify(result.stdout, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
     project.current_project.schemes = parse_schemes(result.stdout)
   end
   return result.code
