@@ -1,16 +1,51 @@
+local nio = require("nio")
+local it = nio.tests.it
 describe("Scheme parsing", function()
-  local util = require("util")
-  local nio = require("nio")
-  local project = require("project")
-
-  local function givenProject()
+  local util, project, xcode, invoked_cmd
+  ---@param type ProjectType
+  local function givenProject(type)
     project.current_project = {
-      type = "workspace",
-      path = "project.xcworkspace",
+      type = type,
+      path = type == "project" and "project.xcodeproj" or "project.xcworkspace",
       schemes = {},
     }
   end
-  nio.tests.it("Parsing output from workspace", function()
+
+  ---@param code number
+  ---@param output string
+  local function stub_external_cmd(code, output)
+    --- @diagnostic disable-next-line: duplicate-set-field
+    util.run_job = function(cmd, on_exit)
+      invoked_cmd = cmd
+      on_exit({
+        signal = 0,
+        stdout = output,
+        code = code,
+      })
+    end
+  end
+  setup(function()
+    util = require("util")
+    project = require("project")
+    xcode = require("xcode")
+  end)
+
+  teardown(function()
+    util.run_job = function(cmd, on_exit, on_stdout)
+      vim.system(cmd, {
+        text = true,
+        stdout = on_stdout or false,
+      }, on_exit)
+    end
+    project = nil
+  end)
+
+  before_each(function()
+    invoked_cmd = {}
+    project.current_project = nil
+  end)
+
+  it("Parsing output from workspace", function()
     local json = [[
 {
   "workspace" : {
@@ -34,17 +69,8 @@ describe("Scheme parsing", function()
   }
 }
   ]]
-    local invoked_cmd = {}
-    --- @diagnostic disable-next-line: duplicate-set-field
-    util.run_job = function(cmd, on_exit)
-      invoked_cmd = cmd
-      on_exit({
-        signal = 0,
-        stdout = json,
-        code = 0,
-      })
-    end
-    givenProject()
+    givenProject("workspace")
+    stub_external_cmd(0, json)
     local expected = {
       "CaseStudies (SwiftUI)",
       "CaseStudies (UIKit)",
@@ -61,7 +87,6 @@ describe("Scheme parsing", function()
       "tvOSCaseStudies",
       "VoiceMemos",
     }
-    local xcode = require("xcode")
 
     xcode.load_schemes()
 
@@ -89,13 +114,17 @@ describe("Scheme parsing", function()
   }
 }
   ]]
-    local expexted = {
+    local expected = {
       "SchemeA",
       "SchemeB",
     }
+    givenProject("project")
+    stub_external_cmd(0, json)
 
-    local xcode = require("xcode")
-    assert.are.same(expexted, xcode.parse_schemes(json))
+    xcode.load_schemes()
+
+    assert.are.same({ "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, invoked_cmd)
+    assert.are.same(expected, project.current_project.schemes)
   end)
 end)
 
