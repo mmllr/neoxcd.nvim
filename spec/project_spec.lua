@@ -1,3 +1,5 @@
+local assert = require("luassert")
+
 describe("neoxcd plugin", function()
   local nio = require("nio")
   local it = nio.tests.it
@@ -43,7 +45,7 @@ describe("neoxcd plugin", function()
   end)
 
   before_each(function()
-    invoked_cmd = {}
+    invoked_cmd = nil
     project.current_project = nil
   end)
 
@@ -140,6 +142,15 @@ describe("neoxcd plugin", function()
         invoked_cmd
       )
       assert.are.same("schemeB", project.current_project.scheme)
+    end)
+
+    it("Will not update the xcode build server when selecting the same scheme", function()
+      givenProject("project", "schemeA", { "schemeA", "SchemeB", "schemeC" })
+      local result = project.select_scheme("schemeA")
+
+      assert.are.same(0, result)
+      assert.is_nil(invoked_cmd)
+      assert.are.same("schemeA", project.current_project.scheme)
     end)
   end)
 

@@ -140,6 +140,9 @@ function M.select_scheme(scheme)
   if not p or not p.schemes and not vim.list_contains(p.schemes, scheme) then
     return -1
   end
+  if p.scheme == scheme then
+    return 0
+  end
   local opts = M.build_options_for_project(p)
   local result =
     nio.wrap(util.run_job, 3)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
