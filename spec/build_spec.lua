@@ -1,11 +1,12 @@
 local nio = require("nio")
+local assert = require("luassert")
 local project = require("project")
 local util = require("util")
 local sut = require("xcode")
 local it = nio.tests.it
 
 describe("Build logic", function()
-  local invoked_cmd = {}
+  local invoked_cmd
   ---@param code number|nil
   ---@param output string
   local function stub_run_job(code, output)
@@ -42,7 +43,7 @@ describe("Build logic", function()
   end
 
   before_each(function()
-    invoked_cmd = {}
+    invoked_cmd = nil
     project.current_project = nil
   end)
 
