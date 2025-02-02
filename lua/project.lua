@@ -187,4 +187,22 @@ function M.destinations()
   return M.current_project and M.current_project.scheme and destinations[M.current_project.scheme] or nil
 end
 
+---Opens the current project in Xcode
+---@async
+---@return number
+function M.open_in_xcode()
+  if M.current_project == nil then
+    return -1
+  end
+  local cmd = nio.wrap(util.run_job, 3)
+  local result = cmd({ "xcode-select", "-p" })
+  if result.code ~= 0 or result.stdout == nil then
+    return -1
+  end
+  local xcode_path = util.remove_n_components(result.stdout, 2)
+
+  result = cmd({ "open", xcode_path, M.current_project.path })
+  return result.code
+end
+
 return M

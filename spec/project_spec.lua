@@ -5,7 +5,6 @@ describe("neoxcd plugin", function()
   local it = nio.tests.it
   local util = require("util")
   local project = require("project")
-  local invoked_cmd
 
   ---@param type ProjectType
   ---@param scheme string|nil
@@ -20,20 +19,30 @@ describe("neoxcd plugin", function()
     }
   end
 
+  ---@private
+  ---@class StubbedCommand
+  ---@field output string
+  ---@field code number
+
+  ---@type table<string, StubbedCommand>
+  local stubbed_commands = {}
   local previous_run_job
+
   ---@param code number
+  ---@param stubbed_cmd string[]
   ---@param output string
-  local function stub_external_cmd(code, output)
+  local function stub_external_cmd(code, stubbed_cmd, output)
     if not previous_run_job then
       previous_run_job = util.run_job
     end
+    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output }
     --- @diagnostic disable-next-line: duplicate-set-field
     util.run_job = function(cmd, _, on_exit)
-      invoked_cmd = cmd
+      local key = table.concat(cmd, " ")
       on_exit({
         signal = 0,
-        stdout = output,
-        code = code,
+        stdout = stubbed_commands[key].output,
+        code = stubbed_commands[key].code,
       })
     end
   end
@@ -45,7 +54,6 @@ describe("neoxcd plugin", function()
   end)
 
   before_each(function()
-    invoked_cmd = nil
     project.current_project = nil
   end)
 
@@ -75,7 +83,7 @@ describe("neoxcd plugin", function()
 }
   ]]
       givenProject("workspace")
-      stub_external_cmd(0, json)
+      stub_external_cmd(0, { "xcodebuild", "-list", "-json", "-workspace", "project.xcworkspace" }, json)
       local expected = {
         "CaseStudies (SwiftUI)",
         "CaseStudies (UIKit)",
@@ -95,7 +103,6 @@ describe("neoxcd plugin", function()
 
       project.load_schemes()
 
-      assert.are.same({ "xcodebuild", "-list", "-json", "-workspace", "project.xcworkspace" }, invoked_cmd)
       assert.are.same(expected, project.current_project.schemes)
     end)
 
@@ -124,23 +131,22 @@ describe("neoxcd plugin", function()
         "SchemeB",
       }
       givenProject("project")
-      stub_external_cmd(0, json)
+      stub_external_cmd(0, { "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, json)
 
       assert.are.same(0, project.load_schemes())
 
-      assert.are.same({ "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, invoked_cmd)
       assert.are.same(expected, project.current_project.schemes)
     end)
 
     it("Selectin a scheme will update the xcode build server", function()
       givenProject("project", nil, { "schemeA", "SchemeB", "schemeC" })
-      stub_external_cmd(0, "")
+      stub_external_cmd(
+        0,
+        { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" },
+        ""
+      )
 
       assert.are.same(0, project.select_scheme("schemeB"))
-      assert.are.same(
-        { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" },
-        invoked_cmd
-      )
       assert.are.same("schemeB", project.current_project.scheme)
     end)
 
@@ -149,7 +155,6 @@ describe("neoxcd plugin", function()
       local result = project.select_scheme("schemeA")
 
       assert.are.same(0, result)
-      assert.is_nil(invoked_cmd)
       assert.are.same("schemeA", project.current_project.scheme)
     end)
   end)
@@ -185,7 +190,11 @@ describe("neoxcd plugin", function()
       ]]
 
       givenProject("project", "testScheme")
-      stub_external_cmd(0, output)
+      stub_external_cmd(
+        0,
+        { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" },
+        output
+      )
       local expected = {
         { platform = "macOS", arch = "arm64e", id = "deadbeef-deadbeefdeadbeef", name = "My Mac" },
         {
@@ -258,11 +267,6 @@ describe("neoxcd plugin", function()
         },
       }
       assert.are.same(0, project.load_destinations())
-
-      assert.are.same(
-        { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" },
-        invoked_cmd
-      )
       assert.are.same(expected, project.destinations())
     end)
   end)
@@ -321,9 +325,13 @@ describe("neoxcd plugin", function()
       ]]
 
     givenProject("project", "testScheme")
-    stub_external_cmd(0, output)
-    local destinations = {
+    stub_external_cmd(
+      0,
+      { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" },
+      output
+    )
 
+    local destinations = {
       {
         OS = "18.2",
         id = "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
@@ -352,5 +360,12 @@ describe("neoxcd plugin", function()
       project.select_destination(i)
       assert.are.same(d, project.current_project.destination)
     end
+  end)
+
+  it("Can open the project in Xcode", function()
+    givenProject("project", "testScheme")
+    stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer")
+    stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app", "project.xcodeproj" }, "")
+    assert.are.same(0, project.open_in_xcode())
   end)
 end)

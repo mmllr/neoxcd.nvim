@@ -173,20 +173,13 @@ end
 ---@async
 local function open_in_xcode()
   spinner.start("Opening in Xcode...")
-  local xcode_path = run_external_cmd("xcode-select", { "-p" })
-  nio.scheduler()
-  if xcode_path == nil then
-    spinner.stop()
-    vim.notify("Failed to find Xcode path", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-    return
-  end
-  local project = project_file()
-  xcode_path = util.remove_n_components(xcode_path, 2)
-  if project ~= nil then
-    local open = run_external_cmd("open", { xcode_path, project.path })
-  end
+  local result = project.open_in_xcode()
   nio.scheduler()
   spinner.stop()
+  if result ~= 0 then
+    vim.notify("Failed to open project in Xcode", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    return
+  end
 end
 
 return {
