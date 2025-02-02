@@ -301,4 +301,91 @@ describe("neoxcd plugin", function()
       assert.are.equal("󰇄 Any DriverKit Host", util.format_destination(destination))
     end)
   end)
+
+  it("Can select a destination", function()
+    local destinations = {
+      { platform = "macOS", arch = "arm64e", id = "deadbeef-deadbeefdeadbeef", name = "My Mac" },
+      {
+        platform = "macOS",
+        arch = "arm64e",
+        variant = "Mac Catalyst",
+        id = "deadbeef-deadbeefdeadbeef",
+        name = "My Mac",
+      },
+      {
+        platform = "macOS",
+        arch = "arm64",
+        variant = "DriverKit",
+        id = "deadbeef-deadbeefdeadbeef",
+        name = "My Mac",
+      },
+      {
+        platform = "macOS",
+        arch = "arm64",
+        variant = "Designed for [iPad,iPhone]",
+        id = "c0ffeec0-c0ffeec0ffeec0ff",
+        name = "My Mac",
+      },
+      { platform = "iOS", arch = "arm64e", id = "c0ffeec0-c0ffeec0ffeec0ff", name = "Meins" },
+      { name = "Any DriverKit Host", platform = "DriverKit" },
+      { name = "Any iOS Device", platform = "iOS", id = "dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder" },
+      {
+        name = "Any iOS Simulator Device",
+        platform = "iOS Simulator",
+        id = "dvtdevice-DVTiOSDeviceSimulatorPlaceholder-iphonesimulator:placeholder",
+      },
+      { name = "Any Mac", platform = "macOS" },
+      { name = "Any Mac", platform = "macOS", variant = "Mac Catalyst" },
+      {
+        platform = "iOS Simulator",
+        id = "99030200-5D08-471A-9F69-A667A38F0DD6",
+        OS = "17.5",
+        name = "iPad (10th generation)",
+      },
+      {
+        platform = "iOS Simulator",
+        id = "48BF3B63-0C44-48F0-AA55-A027D2221550",
+        name = "iPad (10th generation)",
+        OS = "18.2",
+      },
+      { OS = "15.5", id = "277E7397-BEB6-4F5A-8095-715C9FFB396F", name = "iPhone 6s", platform = "iOS Simulator" },
+      {
+        OS = "18.2",
+        id = "E44A13CA-AF60-4ED4-A9B8-EE59D0B5A01F",
+        name = "iPhone 16 Plus",
+        platform = "iOS Simulator",
+      },
+      {
+        OS = "18.2",
+        id = "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
+        name = "iPhone 16 Pro",
+        platform = "iOS Simulator",
+      },
+      {
+        OS = "18.2",
+        id = "361683D0-8D89-4D66-8BA7-BF93F34B31EE",
+        name = "iPhone 16 Pro Max",
+        platform = "iOS Simulator",
+      },
+      {
+        OS = "17.5",
+        id = "D6DAB6A2-EC1E-4CF0-A0D3-8A0C63F3CEB0",
+        name = "iPhone SE (3rd generation)",
+        platform = "iOS Simulator",
+      },
+    }
+
+    ---@type Project
+    project.current_project = {
+      path = "project.xcodeproj",
+      type = "project",
+      schemes = {},
+      destinations = destinations,
+    }
+
+    for i, d in ipairs(destinations) do
+      project.select_destination(i)
+      assert.are.equal(d, project.current_project.destination)
+    end
+  end)
 end)

@@ -50,17 +50,6 @@ local function run_external_cmd(cmd, args, detached)
   return output
 end
 
----@async
-local function show_destinations(scheme, opts)
-  local output =
-    run_external_cmd("xcodebuild", util.concat({ "-showdestinations", "-scheme", scheme, "-quiet" }, opts or {}))
-  if output then
-    return xcode.parse_destinations(output)
-  else
-    return nil
-  end
-end
-
 --- Shows a list of schemes and updates the xcode-build-server config
 ---@async
 local select_schemes = function()
@@ -94,26 +83,23 @@ end
 --- Selects a destination for the current scheme
 ---@async
 local function select_destination()
-  local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
-  nio.scheduler()
-  if scheme then
-    spinner.start("Loading destinations for scheme: " .. scheme .. "...")
-    local opts = find_build_options()
-    local destinations = show_destinations(scheme, opts)
-    spinner.stop()
-    if #destinations > 0 and destinations then
-      nio.scheduler()
-      local selection = select_async(destinations, {
-        prompt = "Select a destination",
-        format_item = util.format_destination,
-      })
-      destination_mapping[scheme] = selection
-    else
-      vim.notify("No destinations found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-    end
-  else
+  if project.current_project == nil or project.current_project.scheme == nil then
     vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    return
   end
+  spinner.start("Loading destinations for scheme: " .. project.current_project.scheme .. "...")
+  local result = xcode.load_destinations()
+  spinner.stop()
+  if result ~= 0 or project.current_project.destinations == nil then
+    vim.notify("Failed to load destinations", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    return
+  end
+  nio.scheduler()
+  local _, idx = select_async(project.current_project.destinations, {
+    prompt = "Select a destination",
+    format_item = util.format_destination,
+  })
+  project.select_destination(idx)
 end
 
 ---Cleans the project

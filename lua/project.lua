@@ -53,4 +53,17 @@ function M.find_build_options()
   return nil
 end
 
+---Select a destination
+---@param index number
+function M.select_destination(index)
+  if
+    M.current_project == nil
+    or M.current_project.destinations == nil
+    or index < 1
+    or index > #M.current_project.destinations
+  then
+    return
+  end
+  M.current_project.destination = M.current_project.destinations[index]
+end
 return M
