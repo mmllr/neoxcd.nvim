@@ -140,8 +140,10 @@ end
 ---@async
 local function build()
   local start_time = os.time()
+  spinner.start("Building project...")
   local code = xcode.build()
   nio.scheduler()
+  spinner.stop()
   if code == 0 then
     local end_time = os.time()
     local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
