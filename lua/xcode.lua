@@ -141,7 +141,6 @@ function M.build()
     util.format_destination_for_build(project.current_project.destination),
     "-configuration",
     "Debug",
-    -- "-quiet",
   }
   local result = nio.wrap(run_build, 2)(cmd)
   update_build_target()
