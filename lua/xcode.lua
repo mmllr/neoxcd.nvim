@@ -39,21 +39,22 @@ local function extract_fields(destination)
   return result
 end
 
+local function get_type(type)
+  if type == "error" then
+    return "E"
+  elseif type == "warning" then
+    return "W"
+  else
+    return "I"
+  end
+end
 ---Parse the output of `xcodebuild` into an optional error message
 ---@param error_message string
 ---@return QuickfixEntry|nil
 local function parse_error_message(error_message)
-  local pattern = "([^:]+):(%d+):(%d+): (%a+): (.+)"
-  local filename, line, column, type, message = error_message:match(pattern)
-  local function get_type()
-    if type == "error" then
-      return "E"
-    elseif type == "warning" then
-      return "W"
-    else
-      return "I"
-    end
-  end
+  local rex = require("rex_posix")
+  local filename, line, column, type, message =
+    rex.match(error_message, "^(.+):([0-9]+):([0-9]+): (error|warning): (.+)$")
   if filename and line and column and type and message then
     local lnum = tonumber(line)
     local col = tonumber(column)
@@ -65,7 +66,7 @@ local function parse_error_message(error_message)
       filename = filename,
       lnum = lnum,
       col = col,
-      type = get_type(),
+      type = get_type(type),
       text = message,
     }
   else
@@ -107,17 +108,19 @@ local function add_build_log(line)
   update_build_target()
 end
 
----@param line string
-local function add_quickfix(line)
+---@param output string
+local function add_quickfix(output)
   if not project.current_project then
     return
   end
   if project.current_project.quickfixes == nil then
     project.current_project.quickfixes = {}
   end
-  local entry = parse_error_message(line)
-  if entry then
-    table.insert(project.current_project.quickfixes, entry)
+  for line in output:gmatch("[^\n]+") do
+    local entry = parse_error_message(line)
+    if entry then
+      table.insert(project.current_project.quickfixes, entry)
+    end
   end
 end
 
