@@ -92,8 +92,7 @@ local function select_destination()
     vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     return
   end
-  local destinations = project.destinations()
-  if destinations == nil then
+  if project.destinations() == nil then
     spinner.start("Loading destinations for scheme: " .. project.current_project.scheme .. "...")
     local result = project.load_destinations()
     spinner.stop()
@@ -103,7 +102,7 @@ local function select_destination()
     end
     nio.scheduler()
   end
-  local _, idx = select_async(destinations, {
+  local _, idx = select_async(project.destinations(), {
     prompt = "Select a destination",
     format_item = util.format_destination,
   })
