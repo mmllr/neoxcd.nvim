@@ -30,6 +30,7 @@ local function get_type(type)
     return "I"
   end
 end
+
 ---Parse the output of `xcodebuild` into an optional error message
 ---@param error_message string
 ---@return QuickfixEntry|nil
@@ -127,6 +128,7 @@ function M.build()
     return -2
   end
 
+  project.current_project.quickfixes = nil
   build = {
     variables = {},
     log = {},
