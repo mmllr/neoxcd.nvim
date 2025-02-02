@@ -148,6 +148,9 @@ local function build()
     local end_time = os.time()
     local msg = string.format("Build succeeded in %.2f seconds", os.difftime(end_time, start_time))
     vim.notify(msg, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
+    if project.current_project.quickfixes then
+      vim.fn.setqflist(project.current_project.quickfixes, "r")
+    end
   else
     vim.notify("Build failed", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
   end
