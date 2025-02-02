@@ -113,30 +113,9 @@ end
 ---@async
 local function clean()
   spinner.start("Cleaning project...")
-  local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
-  nio.scheduler()
-  if scheme == nil then
-    vim.notify("No scheme selected", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-    return
-  end
-  if destination_mapping[scheme] == nil then
-    vim.notify(
-      "No destination selected, use NeoxcdSelectDestination to choose a destination",
-      vim.log.levels.ERROR,
-      { id = "Neoxcd", title = "Neoxcd" }
-    )
-    return
-  end
-  local result = run_external_cmd("xcodebuild", {
-    "clean",
-    "-scheme",
-    scheme,
-    "-destination",
-    util.format_destination_for_build(destination_mapping[scheme]),
-  })
-  nio.scheduler()
+  local result = xcode.clean()
   spinner.stop()
-  if result ~= nil then
+  if result == 0 then
     vim.notify("Project cleaned", vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   else
     vim.notify("Failed to clean project", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })

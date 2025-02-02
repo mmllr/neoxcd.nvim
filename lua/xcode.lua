@@ -149,4 +149,26 @@ function M.build()
   return result.code
 end
 
+---Builds the target
+---@async
+---@return number
+function M.clean()
+  if not project.current_project.scheme then
+    return -1
+  end
+  if not project.current_project.destination then
+    return -2
+  end
+  local cmd = {
+    "xcodebuild",
+    "clean",
+    "-scheme",
+    project.current_project.scheme,
+    "-destination",
+    util.format_destination_for_build(project.current_project.destination),
+  }
+  local result = nio.wrap(run_build, 2)(cmd)
+  return result.code
+end
+
 return M

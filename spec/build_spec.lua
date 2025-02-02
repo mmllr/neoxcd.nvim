@@ -135,4 +135,11 @@ note: Run script build phase 'Build number from git' will be run during every bu
     assert.are.same("/Users/user/MyProject-Folder/MyProduct/Info.plist", project.current_target.plist)
     assert.are.same("MyProduct-Folder", project.current_target.module_name)
   end)
+
+  it("Clean command", function()
+    givenProject("scheme")
+    stub_run_job(0, "")
+    assert.are.same(0, sut.clean())
+    assert.are.same({ "xcodebuild", "clean", "-scheme", "scheme", "-destination", "platform=iOS,id=id" }, invoked_cmd)
+  end)
 end)
