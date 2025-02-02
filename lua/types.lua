@@ -18,6 +18,9 @@
 ---An enum describing a project
 ---@alias ProjectType "project" | "workspace" | "package"
 
+---A cached entry for mapping destinations to schemes
+---@alias DestinationCache table<string, Destination[]>
+
 ---A class representing a Xcode project
 ---@class Project
 ---@field name? string
@@ -26,7 +29,6 @@
 ---@field scheme? string
 ---@field destination? Destination
 ---@field schemes string[]
----@field destinations Destination[]
 ---@field quickfixes? QuickfixEntry[]
 
 ---A class representing a build target

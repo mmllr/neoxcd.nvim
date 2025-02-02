@@ -3,7 +3,6 @@ describe("neoxcd plugin", function()
   local it = nio.tests.it
   local util = require("util")
   local project = require("project")
-  local xcode = require("xcode")
   local invoked_cmd
 
   ---@param type ProjectType
@@ -41,7 +40,6 @@ describe("neoxcd plugin", function()
     util.run_job = previous_run_job
     previous_run_job = nil
     project = nil
-    xcdoe = nil
   end)
 
   before_each(function()
@@ -93,7 +91,7 @@ describe("neoxcd plugin", function()
         "VoiceMemos",
       }
 
-      xcode.load_schemes()
+      project.load_schemes()
 
       assert.are.same({ "xcodebuild", "-list", "-json", "-workspace", "project.xcworkspace" }, invoked_cmd)
       assert.are.same(expected, project.current_project.schemes)
@@ -126,7 +124,7 @@ describe("neoxcd plugin", function()
       givenProject("project")
       stub_external_cmd(0, json)
 
-      assert.are.same(0, xcode.load_schemes())
+      assert.are.same(0, project.load_schemes())
 
       assert.are.same({ "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, invoked_cmd)
       assert.are.same(expected, project.current_project.schemes)
@@ -136,7 +134,7 @@ describe("neoxcd plugin", function()
       givenProject("project", nil, { "schemeA", "SchemeB", "schemeC" })
       stub_external_cmd(0, "")
 
-      assert.are.same(0, xcode.select_scheme("schemeB"))
+      assert.are.same(0, project.select_scheme("schemeB"))
       assert.are.same(
         { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" },
         invoked_cmd
@@ -248,13 +246,13 @@ describe("neoxcd plugin", function()
           platform = "iOS Simulator",
         },
       }
-      assert.are.same(0, xcode.load_destinations())
+      assert.are.same(0, project.load_destinations())
 
       assert.are.same(
         { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" },
         invoked_cmd
       )
-      assert.are.same(expected, project.current_project.destinations)
+      assert.are.same(expected, project.destinations())
     end)
   end)
 
@@ -303,58 +301,18 @@ describe("neoxcd plugin", function()
   end)
 
   it("Can select a destination", function()
+    local output = [[
+
+
+        Available destinations for the "testScheme" scheme:
+                { platform:iOS Simulator, id:78379CC1-79BE-4C8B-ACAD-730424A40DFC, OS:18.2, name:iPhone 16 Pro }
+                { platform:iOS Simulator, id:361683D0-8D89-4D66-8BA7-BF93F34B31EE, OS:18.2, name:iPhone 16 Pro Max }
+      ]]
+
+    givenProject("project", "testScheme")
+    stub_external_cmd(0, output)
     local destinations = {
-      { platform = "macOS", arch = "arm64e", id = "deadbeef-deadbeefdeadbeef", name = "My Mac" },
-      {
-        platform = "macOS",
-        arch = "arm64e",
-        variant = "Mac Catalyst",
-        id = "deadbeef-deadbeefdeadbeef",
-        name = "My Mac",
-      },
-      {
-        platform = "macOS",
-        arch = "arm64",
-        variant = "DriverKit",
-        id = "deadbeef-deadbeefdeadbeef",
-        name = "My Mac",
-      },
-      {
-        platform = "macOS",
-        arch = "arm64",
-        variant = "Designed for [iPad,iPhone]",
-        id = "c0ffeec0-c0ffeec0ffeec0ff",
-        name = "My Mac",
-      },
-      { platform = "iOS", arch = "arm64e", id = "c0ffeec0-c0ffeec0ffeec0ff", name = "Meins" },
-      { name = "Any DriverKit Host", platform = "DriverKit" },
-      { name = "Any iOS Device", platform = "iOS", id = "dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder" },
-      {
-        name = "Any iOS Simulator Device",
-        platform = "iOS Simulator",
-        id = "dvtdevice-DVTiOSDeviceSimulatorPlaceholder-iphonesimulator:placeholder",
-      },
-      { name = "Any Mac", platform = "macOS" },
-      { name = "Any Mac", platform = "macOS", variant = "Mac Catalyst" },
-      {
-        platform = "iOS Simulator",
-        id = "99030200-5D08-471A-9F69-A667A38F0DD6",
-        OS = "17.5",
-        name = "iPad (10th generation)",
-      },
-      {
-        platform = "iOS Simulator",
-        id = "48BF3B63-0C44-48F0-AA55-A027D2221550",
-        name = "iPad (10th generation)",
-        OS = "18.2",
-      },
-      { OS = "15.5", id = "277E7397-BEB6-4F5A-8095-715C9FFB396F", name = "iPhone 6s", platform = "iOS Simulator" },
-      {
-        OS = "18.2",
-        id = "E44A13CA-AF60-4ED4-A9B8-EE59D0B5A01F",
-        name = "iPhone 16 Plus",
-        platform = "iOS Simulator",
-      },
+
       {
         OS = "18.2",
         id = "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
@@ -367,25 +325,21 @@ describe("neoxcd plugin", function()
         name = "iPhone 16 Pro Max",
         platform = "iOS Simulator",
       },
-      {
-        OS = "17.5",
-        id = "D6DAB6A2-EC1E-4CF0-A0D3-8A0C63F3CEB0",
-        name = "iPhone SE (3rd generation)",
-        platform = "iOS Simulator",
-      },
     }
 
     ---@type Project
     project.current_project = {
       path = "project.xcodeproj",
       type = "project",
-      schemes = {},
-      destinations = destinations,
+      scheme = "testScheme",
+      schemes = { "testScheme" },
     }
+    project.load_destinations()
+    project.select_scheme("testScheme")
 
     for i, d in ipairs(destinations) do
       project.select_destination(i)
-      assert.are.equal(d, project.current_project.destination)
+      assert.are.same(d, project.current_project.destination)
     end
   end)
 end)
