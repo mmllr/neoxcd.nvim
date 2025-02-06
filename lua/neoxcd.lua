@@ -4,51 +4,11 @@ local project = require("project")
 local util = require("util")
 local xcode = require("xcode")
 
----@async
----@param directory string
----@return string|nil
-local function current_scheme(directory)
-  local file = nio.file.open(directory .. "/buildServer.json")
-  if not file then
-    return nil
-  end
-  local content, error = file.read(nil, 0)
-  file.close()
-  if content == nil or error then
-    return nil
-  end
-  local decoded = vim.json.decode(content)
-  if decoded and decoded["scheme"] then
-    return decoded["scheme"]
-  else
-    return nil
-  end
-end
-
 local function show_ui(schemes, opts, callback)
   vim.ui.select(schemes, opts, callback)
 end
 
 local select_async = nio.wrap(show_ui, 3)
-
----Run an external command
----@async
----@param cmd string
----@param args string[]|nil
----@param detached boolean|nil
-local function run_external_cmd(cmd, args, detached)
-  local result = nio.process.run({
-    cmd = cmd,
-    args = args,
-    detached = detached,
-  })
-  if result == nil then
-    return nil
-  end
-  local output = result.stdout.read()
-  result.close()
-  return output
-end
 
 --- Shows a list of schemes and updates the xcode-build-server config
 ---@async
@@ -60,6 +20,7 @@ local select_schemes = function()
   if #project.current_project.schemes == 0 then
     spinner.start("Loading schemes...")
     local result = project.load_schemes()
+
     nio.scheduler()
     spinner.stop()
     local schemes = project.current_project.schemes
@@ -142,33 +103,6 @@ local function build()
   end
 end
 
----Starts the simulator
----@async
----@param id string
-local function open_in_simulator(id)
-  spinner.start("Opening in simulator...")
-  local result = run_external_cmd("xcrun", { "simctl", "boot", id })
-  nio.scheduler()
-  if result == nil then
-    spinner.stop()
-    vim.notify("Failed to start simulator", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-    return
-  end
-  local xcode_path = run_external_cmd("xcode-select", { "-p" })
-  if xcode_path == nil then
-    spinner.stop()
-    vim.notify("Failed to find Xcode path", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-    return
-  end
-  local simulator_path = string.gsub(xcode_path, "\n", "") .. "/Applications/Simulator.app"
-  local open = run_external_cmd("open", { simulator_path })
-  spinner.stop()
-  if open == nil then
-    nio.scheduler()
-    vim.notify("Failed to open simulator", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
-  end
-end
-
 ---Opens the current project in Xcode
 ---@async
 local function open_in_xcode()
@@ -183,7 +117,6 @@ local function open_in_xcode()
 end
 
 return {
-  current_scheme = current_scheme,
   setup = function(options)
     project.load()
   end,
