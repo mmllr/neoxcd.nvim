@@ -94,19 +94,17 @@ local function add_build_log(line)
   update_build_target()
 end
 
----@param output string
-local function add_quickfix(output)
+---@param line string
+local function add_quickfix(line)
   if not project.current_project then
     return
   end
   if project.current_project.quickfixes == nil then
     project.current_project.quickfixes = {}
   end
-  for line in output:gmatch("[^\n]+") do
-    local entry = parse_error_message(line)
-    if entry then
-      table.insert(project.current_project.quickfixes, entry)
-    end
+  local entry = parse_error_message(line)
+  if entry then
+    table.insert(project.current_project.quickfixes, entry)
   end
 end
 
@@ -114,8 +112,10 @@ end
 local function run_build(cmd, callback)
   util.run_job(cmd, function(_, data)
     if data then
-      add_build_log(data)
-      add_quickfix(data)
+      for line in data:gmatch("[^\n]+") do
+        add_build_log(line)
+        add_quickfix(line)
+      end
     end
   end, callback)
 end
@@ -149,6 +149,7 @@ function M.build()
   }
   local result = nio.wrap(run_build, 2)(cmd)
   update_build_target()
+  vim.notify(vim.inspect(project.current_target), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   return result.code
 end
 
