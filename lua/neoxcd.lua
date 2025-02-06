@@ -129,7 +129,11 @@ return {
     local result = project.open_in_simulator()
     spinner.stop()
     if result ~= 0 then
-      vim.notify("Failed to open project in simulator", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+      vim.notify(
+        "Failed to open project in simulator, failed with error " .. result,
+        vim.log.levels.ERROR,
+        { id = "Neoxcd", title = "Neoxcd" }
+      )
     end
   end),
   open_in_xcode = nio.create(open_in_xcode),
