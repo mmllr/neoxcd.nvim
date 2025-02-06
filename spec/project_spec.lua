@@ -160,6 +160,14 @@ describe("neoxcd plugin", function()
       assert.are.same(0, result)
       assert.are.same("schemeA", project.current_project.scheme)
     end)
+
+    it("Will not update the xcode build server for Swift packages", function()
+      givenProject("package", nil, { "schemeA", "SchemeB", "schemeC" })
+      local result = project.select_scheme("schemeA")
+
+      assert.are.same(0, result)
+      assert.are.same("schemeA", project.current_project.scheme)
+    end)
   end)
 
   describe("Destination parsing", function()

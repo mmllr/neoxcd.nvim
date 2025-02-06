@@ -140,7 +140,8 @@ function M.select_scheme(scheme)
   if not p or not p.schemes and not vim.list_contains(p.schemes, scheme) then
     return -1
   end
-  if p.scheme == scheme then
+  if p.scheme == scheme or p.type == "package" then
+    M.current_project.scheme = scheme
     return 0
   end
   local opts = M.build_options_for_project(p)
@@ -195,7 +196,7 @@ function M.open_in_xcode()
     return -1
   end
   local cmd = nio.wrap(util.run_job, 3)
-  local result = cmd({ "xcode-select", "-p" })
+  local result = cmd({ "xcode-select", "-p" }, nil)
   if result.code ~= 0 or result.stdout == nil then
     return -1
   end
