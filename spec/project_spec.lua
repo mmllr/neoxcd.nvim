@@ -9,13 +9,16 @@ describe("neoxcd plugin", function()
   ---@param type ProjectType
   ---@param scheme string|nil
   ---@param schemes string[]|nil
-  local function givenProject(type, scheme, schemes)
+  ---@param destination Destination|nil
+  ---@param destinations Destination[]|nil
+  local function givenProject(type, scheme, schemes, destination, destinations)
     project.current_project = {
       type = type,
       path = type == "project" and "project.xcodeproj" or "project.xcworkspace",
+      destination = destination,
       schemes = schemes or {},
       scheme = scheme,
-      destinations = {},
+      destinations = destinations or {},
     }
   end
 
@@ -367,5 +370,20 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer")
     stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app", "project.xcodeproj" }, "")
     assert.are.same(0, project.open_in_xcode())
+  end)
+
+  it("can open the project in the Simulator", function()
+    ---@type Destination
+    local simulator_dest = {
+      platform = "iOS Simulator",
+      id = "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
+      name = "iPhone 16 Pro",
+    }
+    givenProject("project", "testScheme", {}, simulator_dest)
+    stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer\n")
+    stub_external_cmd(0, { "xcrun", "simctl", "boot", "78379CC1-79BE-4C8B-ACAD-730424A40DFC" }, "")
+    stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app/Contents/Developer/Applications/Simulator.app" }, "")
+
+    assert.are.same(0, project.open_in_simulator())
   end)
 end)

@@ -205,4 +205,29 @@ function M.open_in_xcode()
   return result.code
 end
 
+---Opens the current project in the simulator
+---@async
+---@return number
+function M.open_in_simulator()
+  if M.current_project == nil then
+    return -1
+  end
+  if M.current_project.destination == nil then
+    return -2
+  end
+  local cmd = nio.wrap(util.run_job, 3)
+  local result = cmd({ "xcrun", "simctl", "boot", M.current_project.destination.id }, nil)
+  if result.code ~= 0 then
+    return -3
+  end
+
+  result = cmd({ "xcode-select", "-p" })
+  if result.code ~= 0 or result.stdout == nil then
+    return -4
+  end
+  local simulator_path = string.gsub(result.stdout, "\n", "/Applications/Simulator.app")
+  result = cmd({ "open", simulator_path })
+  return result.code
+end
+
 return M

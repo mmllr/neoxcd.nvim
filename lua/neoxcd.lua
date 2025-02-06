@@ -192,18 +192,12 @@ return {
   select_schemes = nio.create(select_schemes),
   select_destination = nio.create(select_destination),
   open_in_simulator = nio.create(function()
-    local scheme = selected_scheme or current_scheme(nio.fn.getcwd())
-    nio.scheduler()
-    local destination = destination_mapping[scheme]
-    if destination == nil then
-      vim.notify(
-        "No destination selected, use NeoxcdSelectDestination to choose a destination",
-        vim.log.levels.ERROR,
-        { id = "Neoxcd", title = "Neoxcd" }
-      )
-      return
+    spinner.start("Opening in simulator...")
+    local result = project.open_in_simulator()
+    spinner.stop()
+    if result ~= 0 then
+      vim.notify("Failed to open project in simulator", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     end
-    open_in_simulator(destination.id)
   end),
   open_in_xcode = nio.create(open_in_xcode),
 }
