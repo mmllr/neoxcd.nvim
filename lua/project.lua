@@ -210,7 +210,7 @@ end
 ---@async
 ---@return number
 function M.open_in_simulator()
-  if M.current_project == nil then
+  if M.current_project == nil or M.current_target == nil then
     return -1
   end
   if M.current_project.destination == nil then
@@ -228,6 +228,14 @@ function M.open_in_simulator()
   end
   local simulator_path = string.gsub(result.stdout, "\n", "/Applications/Simulator.app")
   result = cmd({ "open", simulator_path })
+  if result.code ~= 0 then
+    return -5
+  end
+  result = cmd({ "xcrun", "simctl", "install", M.current_project.destination.id, M.current_target.app_path }, nil)
+  if result.code ~= 0 then
+    return -6
+  end
+  result = cmd({ "xcrun", "simctl", "launch", M.current_project.destination.id, M.current_target.bundle_id }, nil)
   return result.code
 end
 

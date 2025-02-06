@@ -22,6 +22,18 @@ describe("neoxcd plugin", function()
     }
   end
 
+  ---@param path string
+  ---@param bundle_id string
+  local function givenTarget(path, bundle_id)
+    project.current_target = {
+      app_path = path,
+      bundle_id = bundle_id,
+      name = "TestApp",
+      plist = "TestApp/Info.plist",
+      module_name = "TestApp",
+    }
+  end
+
   ---@private
   ---@class StubbedCommand
   ---@field output string
@@ -47,6 +59,7 @@ describe("neoxcd plugin", function()
         stdout = stubbed_commands[key].output,
         code = stubbed_commands[key].code,
       })
+      stubbed_commands[key] = nil
     end
   end
 
@@ -58,6 +71,15 @@ describe("neoxcd plugin", function()
 
   before_each(function()
     project.current_project = nil
+    project.current_target = nil
+  end)
+
+  after_each(function()
+    assert.are.same(
+      stubbed_commands,
+      {},
+      "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands)
+    )
   end)
 
   describe("Scheme handling", function()
@@ -388,9 +410,20 @@ describe("neoxcd plugin", function()
       name = "iPhone 16 Pro",
     }
     givenProject("project", "testScheme", {}, simulator_dest)
+    givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
     stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer\n")
     stub_external_cmd(0, { "xcrun", "simctl", "boot", "78379CC1-79BE-4C8B-ACAD-730424A40DFC" }, "")
     stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app/Contents/Developer/Applications/Simulator.app" }, "")
+    stub_external_cmd(
+      0,
+      { "xcrun", "simctl", "install", "78379CC1-79BE-4C8B-ACAD-730424A40DFC", "/path/to/build/TestApp.app" },
+      ""
+    )
+    stub_external_cmd(
+      0,
+      { "xcrun", "simctl", "launch", "78379CC1-79BE-4C8B-ACAD-730424A40DFC", "com.test.TestApp" },
+      ""
+    )
 
     assert.are.same(0, project.open_in_simulator())
   end)
