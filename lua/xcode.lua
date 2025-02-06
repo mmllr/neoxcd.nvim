@@ -70,12 +70,15 @@ local function update_build_target()
     build.variables.PRODUCT_NAME
     and build.variables.PRODUCT_BUNDLE_IDENTIFIER
     and build.variables.PRODUCT_SETTINGS_PATH
+    and build.variables.FULL_PRODUCT_NAME
+    and build.variables.TARGET_BUILD_DIR
   then
     project.current_target = {
       name = build.variables.PRODUCT_NAME,
       bundle_id = build.variables.PRODUCT_BUNDLE_IDENTIFIER,
       module_name = build.variables.PRODUCT_MODULE_NAME,
       plist = build.variables.PRODUCT_SETTINGS_PATH,
+      app_path = build.variables.TARGET_BUILD_DIR .. "/" .. build.variables.FULL_PRODUCT_NAME,
     }
   end
 end

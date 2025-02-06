@@ -119,6 +119,9 @@ note: Run script build phase 'Build number from git' will be run during every bu
     export PROJECT_NAME\=MyProject
     export PROJECT_TEMP_DIR\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build
     export PROJECT_TEMP_ROOT\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex
+    export TARGET_BUILD_DIR\=/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator
+    export WRAPPER_NAME\=MyProduct.app
+    export FULL_PRODUCT_NAME\=MyProduct.app
       ]]
 
     stub_run_job(0, log)
@@ -134,6 +137,10 @@ note: Run script build phase 'Build number from git' will be run during every bu
     assert.are.same("com.product.myproduct", project.current_target.bundle_id)
     assert.are.same("/Users/user/MyProject-Folder/MyProduct/Info.plist", project.current_target.plist)
     assert.are.same("MyProduct-Folder", project.current_target.module_name)
+    assert.are.same(
+      "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator/MyProduct.app",
+      project.current_target.app_path
+    )
   end)
 
   it("Clean command", function()

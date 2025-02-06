@@ -37,3 +37,4 @@
 ---@field bundle_id string
 ---@field plist string
 ---@field module_name string
+---@field app_path string
