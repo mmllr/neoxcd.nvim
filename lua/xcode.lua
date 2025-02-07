@@ -1,24 +1,23 @@
 local nio = require("nio")
 local util = require("util")
 local project = require("project")
+local types = require("types")
 local M = {}
 
 ---@private
 ---@class Build
----@field variables? table
 ---@field log? string[]
 local build = {}
 
----Parse the output of `xcodebuild` into exported variables
----@param line string
-local function parse_exported_variables(line)
-  if build.variables == nil then
-    build.variables = {}
+---Parse the output of `xcodebuild` into build settings
+---@param input string json with build settings
+---@return table<string, string>|nil
+local function parse_settings(input)
+  local data = vim.json.decode(input)
+  if data and data[1] and data[1] then
+    return data[1]["buildSettings"]
   end
-  local key, value = line:match("export%s+(%S+)%s*\\=%s*(.+)")
-  if key and value then
-    build.variables[key] = value
-  end
+  return data
 end
 
 local function get_type(type)
@@ -59,26 +58,27 @@ end
 
 ---Parse the product after a successful build
 local function update_build_target()
-  if project.current_project == nil then
+  local variables = project.current_project.build_settings
+  if variables == nil then
     return
   end
-  if build.variables.PROJECT and build.variables.PROJECT_FILE_PATH then
-    project.current_project.name = build.variables.PROJECT
-    project.current_project.path = build.variables.PROJECT_FILE_PATH
+  if variables.PROJECT and variables.PROJECT_FILE_PATH then
+    project.current_project.name = variables.PROJECT
+    project.current_project.path = variables.PROJECT_FILE_PATH
   end
   if
-    build.variables.PRODUCT_NAME
-    and build.variables.PRODUCT_BUNDLE_IDENTIFIER
-    and build.variables.PRODUCT_SETTINGS_PATH
-    and build.variables.FULL_PRODUCT_NAME
-    and build.variables.TARGET_BUILD_DIR
+    variables.PRODUCT_NAME
+    and variables.PRODUCT_BUNDLE_IDENTIFIER
+    and variables.PRODUCT_SETTINGS_PATH
+    and variables.FULL_PRODUCT_NAME
+    and variables.TARGET_BUILD_DIR
   then
     project.current_target = {
-      name = build.variables.PRODUCT_NAME,
-      bundle_id = build.variables.PRODUCT_BUNDLE_IDENTIFIER,
-      module_name = build.variables.PRODUCT_MODULE_NAME,
-      plist = build.variables.PRODUCT_SETTINGS_PATH,
-      app_path = build.variables.TARGET_BUILD_DIR .. "/" .. build.variables.FULL_PRODUCT_NAME,
+      name = variables.PRODUCT_NAME,
+      bundle_id = variables.PRODUCT_BUNDLE_IDENTIFIER,
+      module_name = variables.PRODUCT_MODULE_NAME,
+      plist = variables.PRODUCT_SETTINGS_PATH,
+      app_path = variables.TARGET_BUILD_DIR .. "/" .. variables.FULL_PRODUCT_NAME,
     }
   end
 end
@@ -90,8 +90,6 @@ local function add_build_log(line)
     build.log = {}
   end
   table.insert(build.log, line)
-  parse_exported_variables(line)
-  update_build_target()
 end
 
 ---@param line string
@@ -148,8 +146,6 @@ function M.build()
     "Debug",
   }
   local result = nio.wrap(run_build, 2)(cmd)
-  update_build_target()
-  vim.notify(vim.inspect(project.current_target), vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   return result.code
 end
 
@@ -175,4 +171,33 @@ function M.clean()
   return result.code
 end
 
+---Loads the build settings
+---@async
+---@return number
+function M.load_build_settings()
+  if not project.current_project.scheme then
+    return -1
+  end
+  if not project.current_project.destination then
+    return -2
+  end
+  local cmd = {
+    "xcodebuild",
+    "build",
+    "-scheme",
+    project.current_project.scheme,
+    "-destination",
+    util.format_destination_for_build(project.current_project.destination),
+    "-configuration",
+    "Debug",
+    "-showBuildSettings",
+    "-json",
+  }
+  local result = nio.wrap(util.run_job, 3)(cmd)
+  if result.code == 0 and result.stdout then
+    project.current_project.build_settings = parse_settings(result.stdout)
+    update_build_target()
+  end
+  return result.code
+end
 return M

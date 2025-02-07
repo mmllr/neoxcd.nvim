@@ -34,11 +34,6 @@ describe("neoxcd plugin", function()
     }
   end
 
-  ---@private
-  ---@class StubbedCommand
-  ---@field output string
-  ---@field code number
-
   ---@type table<string, StubbedCommand>
   local stubbed_commands = {}
   local previous_run_job
@@ -64,7 +59,9 @@ describe("neoxcd plugin", function()
   end
 
   teardown(function()
-    util.run_job = previous_run_job
+    if previous_run_job then
+      util.run_job = previous_run_job
+    end
     previous_run_job = nil
     project = nil
   end)

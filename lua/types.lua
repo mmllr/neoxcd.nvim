@@ -51,6 +51,7 @@ M.Platform = {
 ---@field ARM64 Architecture arm64
 ---@field X86_64 Architecture x86_64
 
+---@type ArchitectureConstants
 M.Architecture = {
   ARM64E = "arm64e",
   ARM64 = "arm64",
