@@ -67,13 +67,28 @@ M.Architecture = {
 ---@field name string
 ---@field OS? string
 
+---The type of a quickfix entry.
+---@alias QuickfixEntryType
+---| "W"
+---| "E"
+
+---@class QuickfixEntryTypeConstants
+---@field WARNING QuickfixEntryType
+---@field ERROR QuickfixEntryType
+
+---@type QuickfixEntryTypeConstants
+M.QuickfixEntryType = {
+  WARNING = "W",
+  ERROR = "E",
+}
+
 ---A class representing a vim quickfix entry
 ---@class QuickfixEntry
 ---@field filename string
 ---@field lnum number
 ---@field col number
 ---@field text string
----@field type string "W" | "E
+---@field type QuickfixEntryType
 
 ---An enum describing a project
 ---@alias ProjectType
@@ -105,6 +120,7 @@ M.ProjectConstants = {
 ---@field destination? Destination
 ---@field schemes string[]
 ---@field quickfixes? QuickfixEntry[]
+---@field build_settings? table<string, string>
 
 ---A class representing a build target
 ---@class Target

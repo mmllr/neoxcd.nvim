@@ -19,14 +19,16 @@ local function parse_settings(input)
   end
   return data
 end
-
+---Parse the output of `xcodebuild` into Quickfix entry types
+---@param type string
+---@return QuickfixEntryType|nil
 local function get_type(type)
   if type == "error" then
-    return "E"
+    return types.QuickfixEntryType.ERROR
   elseif type == "warning" then
-    return "W"
+    return types.QuickfixEntryType.WARNING
   else
-    return "I"
+    return nil
   end
 end
 
@@ -40,15 +42,15 @@ local function parse_error_message(error_message)
   if filename and line and column and type and message then
     local lnum = tonumber(line)
     local col = tonumber(column)
-    if lnum == nil or col == nil then
+    local qfixtype = get_type(type)
+    if lnum == nil or col == nil or type == nil then
       return nil
     end
-    ---@type QuickfixEntry
     return {
       filename = filename,
       lnum = lnum,
       col = col,
-      type = get_type(type),
+      type = qfixtype,
       text = message,
     }
   else
