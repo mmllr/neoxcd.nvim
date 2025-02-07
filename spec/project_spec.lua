@@ -402,7 +402,7 @@ describe("neoxcd plugin", function()
     assert.are.same(0, project.open_in_xcode())
   end)
 
-  it("can open the project in the Simulator", function()
+  it("Running a target on simulator", function()
     ---@type Destination
     local simulator_dest = {
       platform = "iOS Simulator",
@@ -425,6 +425,6 @@ describe("neoxcd plugin", function()
       ""
     )
 
-    assert.are.same(0, project.open_in_simulator())
+    assert.are.same(0, project.run())
   end)
 end)

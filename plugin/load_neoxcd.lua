@@ -44,9 +44,9 @@ local subcommand_tbl = {
     end,
     -- This subcommand has no completions
   },
-  simulator = {
+  run = {
     impl = function(args, opts)
-      require("neoxcd").open_in_simulator()
+      require("neoxcd").run()
     end,
     -- This subcommand has no completions
   },

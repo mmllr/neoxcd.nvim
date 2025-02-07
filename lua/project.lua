@@ -209,7 +209,7 @@ end
 ---Opens the current project in the simulator
 ---@async
 ---@return number
-function M.open_in_simulator()
+function M.run()
   if M.current_project == nil or M.current_target == nil then
     return -1
   end

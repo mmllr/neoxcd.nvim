@@ -124,9 +124,9 @@ return {
   build = nio.create(build),
   select_schemes = nio.create(select_schemes),
   select_destination = nio.create(select_destination),
-  open_in_simulator = nio.create(function()
+  run = nio.create(function()
     spinner.start("Opening in simulator...")
-    local result = project.open_in_simulator()
+    local result = project.run()
     spinner.stop()
     if result ~= 0 then
       vim.notify(
