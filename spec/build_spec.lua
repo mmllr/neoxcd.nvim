@@ -3,6 +3,7 @@ local assert = require("luassert")
 local project = require("project")
 local util = require("util")
 local sut = require("xcode")
+local types = require("types")
 local it = nio.tests.it
 
 describe("Build logic", function()
@@ -36,7 +37,7 @@ describe("Build logic", function()
     }
     project.current_project.scheme = scheme
     project.current_project.destination = {
-      platform = "iOS",
+      platform = types.Platform.IOS_DEVICE,
       id = "id",
       name = "name",
     }
