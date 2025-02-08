@@ -1,4 +1,5 @@
 local assert = require("luassert")
+local types = require("types")
 
 describe("neoxcd plugin", function()
   local nio = require("nio")
@@ -428,14 +429,14 @@ describe("neoxcd plugin", function()
   it("Running a target on macOS", function()
     ---@type Destination
     local mac_dest = {
-      platform = "macOS",
+      platform = types.Platform.MACOS,
       arch = "arm64",
       name = "My Mac",
       id = "deadbeef-deadbeefdeadbeef",
     }
     givenProject("project", "testScheme", {}, mac_dest)
     givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
-    -- stub_external_cmd(0, { "open", "/path/to/build/TestApp.app" }, "")
-    -- assert.are.same(0, project.run())
+    stub_external_cmd(0, { "open", "/path/to/build/TestApp.app" }, "")
+    assert.are.same(0, project.run())
   end)
 end)

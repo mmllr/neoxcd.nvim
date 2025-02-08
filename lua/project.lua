@@ -285,4 +285,34 @@ local function run_on_simulator(project, target)
   return result.code
 end
 
+---Runs the current project locally
+---@async
+---@param target Target
+---@return ProjectResultCode
+local function run_on_mac(target)
+  local cmd = nio.wrap(util.run_job, 3)
+  local result = cmd({ "open", target.app_path })
+  return result.code
+end
+
+---Runs the current project
+---@async
+---@return number
+function M.run()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  elseif M.current_target == nil then
+    return M.ProjectResult.NO_TARGET
+  elseif M.current_project.destination == nil then
+    return M.ProjectResult.NO_DESTINATION
+  end
+  if M.current_project.destination.platform == types.Platform.IOS_SIMULATOR then
+    return run_on_simulator(M.current_project, M.current_target)
+  elseif M.current_project.destination.platform == types.Platform.MACOS then
+    return run_on_mac(M.current_target)
+  else
+    return M.ProjectResult.NO_DESTINATION
+  end
+end
+
 return M
