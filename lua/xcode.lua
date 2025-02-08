@@ -166,6 +166,10 @@ function M.clean()
     util.format_destination_for_build(project.current_project.destination),
   }
   local result = nio.wrap(run_build, 2)(cmd)
+  if result.code == 0 then
+    project.current_project.quickfixes = nil
+    project.current_project.build_settings = nil
+  end
   return result.code
 end
 

@@ -250,7 +250,11 @@ note: Run script build phase 'Build number from git' will be run during every bu
 
   it("Clean command", function()
     givenProject("scheme")
+    project.current_project.build_settings = {}
+    project.current_project.quickfixes = {}
     stub_external_cmd(0, { "xcodebuild", "clean", "-scheme", "scheme", "-destination", "platform=iOS,id=id" }, "")
     assert.are.same(0, sut.clean())
+    assert.is_nil(project.current_project.quickfixes)
+    assert.is_nil(project.current_project.build_settings)
   end)
 end)
