@@ -1,6 +1,41 @@
 local nio = require("nio")
 local util = require("util")
+local types = require("types")
+
 local M = {}
+
+---Result code enum
+---@alias ProjectResultCode number
+---| 0
+---| -1
+---| -2
+---| -3
+---| -4
+---| -5
+---| -6
+---| -7
+
+---@class ProjectResultConstants
+---@field OK ProjectResultCode
+---@field NO_PROJECT ProjectResultCode
+---@field NO_SCHEME ProjectResultCode
+---@field NO_DESTINATION ProjectResultCode
+---@field NO_TARGET ProjectResultCode
+---@field NO_SIMULATOR ProjectResultCode
+---@field NO_XCODE ProjectResultCode
+---@field INSTALL_FAILED ProjectResultCode
+
+---@type ProjectResultConstants
+M.ProjectResult = {
+  OK = 0,
+  NO_PROJECT = -1,
+  NO_SCHEME = -2,
+  NO_DESTINATION = -3,
+  NO_TARGET = -4,
+  NO_SIMULATOR = -5,
+  NO_XCODE = -6,
+  INSTALL_FAILED = -7,
+}
 
 ---@type DestinationCache
 local destinations = {}
@@ -117,11 +152,11 @@ end
 
 ---Load the schemes for the current project
 ---@async
----@return number
+---@return ProjectResultCode
 function M.load_schemes()
   local p = M.current_project
   if not p then
-    return -1
+    return M.ProjectResult.NO_PROJECT
   end
   local opts = M.build_options_for_project(p)
   local result = nio.wrap(util.run_job, 3)(util.concat({ "xcodebuild", "-list", "-json" }, opts), nil)
@@ -134,20 +169,22 @@ end
 ---selects a scheme
 ---@async
 ---@param scheme string
----@return number
+---@return ProjectResultCode
 function M.select_scheme(scheme)
   local p = M.current_project
-  if not p or not p.schemes and not vim.list_contains(p.schemes, scheme) then
-    return -1
+  if not p then
+    return M.ProjectResult.NO_PROJECT
+  elseif p.schemes == nil and not vim.list_contains(p.schemes, scheme) then
+    return M.ProjectResult.NO_SCHEME
   end
   if p.scheme == scheme or p.type == "package" then
     M.current_project.scheme = scheme
-    return 0
+    return M.ProjectResult.OK
   end
   local opts = M.build_options_for_project(p)
   local result =
     nio.wrap(util.run_job, 3)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
-  if result.code == 0 then
+  if result.code == M.ProjectResult.OK then
     M.current_project.scheme = scheme
   end
   return result.code
@@ -158,8 +195,11 @@ end
 ---@return number
 function M.load_destinations()
   local p = M.current_project
-  if not p or not p.scheme then
-    return -1
+  if not p then
+    return M.ProjectResult.NO_PROJECT
+  end
+  if not p.scheme then
+    return M.ProjectResult.NO_SCHEME
   end
 
   local opts = M.build_options_for_project(p)
@@ -167,7 +207,7 @@ function M.load_destinations()
     util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts),
     nil
   )
-  if result.code == 0 and result.stdout then
+  if result.code == M.ProjectResult.OK and result.stdout then
     destinations[p.scheme] = parse_destinations(result.stdout)
   end
   return result.code
@@ -190,15 +230,15 @@ end
 
 ---Opens the current project in Xcode
 ---@async
----@return number
+---@return ProjectResultCode
 function M.open_in_xcode()
   if M.current_project == nil then
-    return -1
+    return M.ProjectResult.NO_PROJECT
   end
   local cmd = nio.wrap(util.run_job, 3)
   local result = cmd({ "xcode-select", "-p" }, nil)
-  if result.code ~= 0 or result.stdout == nil then
-    return -1
+  if result.code ~= M.ProjectResult.OK or result.stdout == nil then
+    return M.ProjectResult.NO_XCODE
   end
   local xcode_path = util.remove_n_components(result.stdout, 2)
 
@@ -206,36 +246,42 @@ function M.open_in_xcode()
   return result.code
 end
 
----Opens the current project in the simulator
+---Boots the current simulator
 ---@async
----@return number
-function M.run()
-  if M.current_project == nil or M.current_target == nil then
-    return -1
-  end
-  if M.current_project.destination == nil then
-    return -2
-  end
+---@param id string
+---@return ProjectResultCode
+local function boot_simulator(id)
   local cmd = nio.wrap(util.run_job, 3)
-  local result = cmd({ "xcrun", "simctl", "boot", M.current_project.destination.id }, nil)
-  if result.code ~= 0 then
-    return -3
+  local result = cmd({ "xcrun", "simctl", "boot", id }, nil)
+  return result.code
+end
+
+---Runs the current project in the simulator
+---@async
+---@param project Project
+---@param target Target
+---@return ProjectResultCode
+local function run_on_simulator(project, target)
+  local result = boot_simulator(project.destination.id)
+  if result ~= M.ProjectResult.OK then
+    return M.ProjectResult.NO_SIMULATOR
   end
 
+  local cmd = nio.wrap(util.run_job, 3)
   result = cmd({ "xcode-select", "-p" })
-  if result.code ~= 0 or result.stdout == nil then
-    return -4
+  if result.code ~= M.ProjectResult.OK or result.stdout == nil then
+    return M.ProjectResult.NO_XCODE
   end
   local simulator_path = string.gsub(result.stdout, "\n", "/Applications/Simulator.app")
   result = cmd({ "open", simulator_path })
-  if result.code ~= 0 then
-    return -5
+  if result.code ~= M.ProjectResult.OK then
+    return M.ProjectResult.NO_SIMULATOR
   end
-  result = cmd({ "xcrun", "simctl", "install", M.current_project.destination.id, M.current_target.app_path }, nil)
-  if result.code ~= 0 then
-    return -6
+  result = cmd({ "xcrun", "simctl", "install", project.destination.id, target.app_path }, nil)
+  if result.code ~= M.ProjectResult.OK then
+    return M.ProjectResult.INSTALL_FAILED
   end
-  result = cmd({ "xcrun", "simctl", "launch", M.current_project.destination.id, M.current_target.bundle_id }, nil)
+  result = cmd({ "xcrun", "simctl", "launch", project.destination.id, target.bundle_id }, nil)
   return result.code
 end
 
