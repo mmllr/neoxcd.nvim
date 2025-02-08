@@ -124,19 +124,15 @@ end
 ---@async
 ---@return number
 function M.build()
-  if not project.current_project.scheme then
-    return -1
-  end
-  if not project.current_project.destination then
-    return -2
-  end
-
   project.current_project.quickfixes = nil
   build = {
     variables = {},
     log = {},
   }
-
+  local result = M.load_build_settings()
+  if result ~= 0 then
+    return result
+  end
   local cmd = {
     "xcodebuild",
     "build",
@@ -147,7 +143,7 @@ function M.build()
     "-configuration",
     "Debug",
   }
-  local result = nio.wrap(run_build, 2)(cmd)
+  result = nio.wrap(run_build, 2)(cmd)
   return result.code
 end
 
@@ -176,7 +172,7 @@ end
 ---Loads the build settings
 ---@async
 ---@return number
-function M.load_build_settings()
+function M.load_build_settings() -- TODO: this might be a local function
   if not project.current_project.scheme then
     return -1
   end
@@ -202,4 +198,5 @@ function M.load_build_settings()
   end
   return result.code
 end
+
 return M

@@ -100,6 +100,47 @@ LLVM Profile Error: Failed to write file "default.profraw": Operation not permit
 note: Run script build phase 'Build number from git' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'CantatasEditor' from project 'Cantatas')
       ]]
 
+    local json = [[
+[
+  {
+    "action" : "build",
+    "buildSettings" : {
+      "PRODUCT_BUNDLE_IDENTIFIER" : "com.product.myproduct",
+      "PRODUCT_BUNDLE_PACKAGE_TYPE" : "APPL",
+      "PRODUCT_MODULE_NAME" : "MyProduct-Folder",
+      "PRODUCT_NAME" : "MyProduct",
+      "PRODUCT_SETTINGS_PATH" : "/Users/user/MyProject-Folder/MyProduct/Info.plist",
+      "PRODUCT_TYPE" : "com.apple.product-type.application",
+      "PROFILING_CODE" : "NO",
+      "PROJECT" : "MyProject",
+      "PROJECT_DERIVED_FILE_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources",
+      "PROJECT_DIR" : "/Users/user/MyProject",
+      "PROJECT_FILE_PATH" : "/Users/user/MyProject/MyProject.xcodeproj",
+      "PROJECT_GUID" : "ad98a1d3d4fc98c1821c175190d3f",
+      "PROJECT_NAME" : "MyProject",
+      "PROJECT_TEMP_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build",
+      "PROJECT_TEMP_ROOT" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex",
+      "TARGET_BUILD_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator",
+      "WRAPPER_NAME" : "MyProduct.app",
+      "FULL_PRODUCT_NAME" : "MyProduct.app"
+    },
+    "target" : "MyProduct"
+  }
+]
+      ]]
+
+    stub_external_cmd(0, {
+      "xcodebuild",
+      "build",
+      "-scheme",
+      "scheme",
+      "-destination",
+      "platform=iOS,id=id",
+      "-configuration",
+      "Debug",
+      "-showBuildSettings",
+      "-json",
+    }, json)
     stub_external_cmd(0, {
       "xcodebuild",
       "build",
@@ -110,6 +151,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "-configuration",
       "Debug",
     }, logs, true)
+
     ---@type QuickfixEntry[]
     local expected = {
       {
@@ -137,6 +179,16 @@ note: Run script build phase 'Build number from git' will be run during every bu
 
     assert.are.same(0, sut.build())
     assert.are.same(expected, project.current_project.quickfixes)
+    assert.are.same("/Users/user/MyProject/MyProject.xcodeproj", project.current_project.path)
+    assert.are.same("MyProject", project.current_project.name)
+    assert.are.same("MyProduct", project.current_target.name)
+    assert.are.same("com.product.myproduct", project.current_target.bundle_id)
+    assert.are.same("/Users/user/MyProject-Folder/MyProduct/Info.plist", project.current_target.plist)
+    assert.are.same("MyProduct-Folder", project.current_target.module_name)
+    assert.are.same(
+      "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator/MyProduct.app",
+      project.current_target.app_path
+    )
   end)
 
   it("Parses the project settings", function()
