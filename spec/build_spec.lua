@@ -11,41 +11,27 @@ describe("Build logic", function()
   local stubbed_commands = {}
   local previous_run_job
 
-  ---@param code number|nil
+  ---@param code number
+  ---@param stubbed_cmd string[]
   ---@param output string
-  local function stub_run_job(code, output)
+  ---@param use_on_stdout boolean|nil
+  local function stub_external_cmd(code, stubbed_cmd, output, use_on_stdout)
+    local use = use_on_stdout or false
     if not previous_run_job then
       previous_run_job = util.run_job
     end
+    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = use }
     --- @diagnostic disable-next-line: duplicate-set-field
     util.run_job = function(cmd, on_stdout, on_exit)
-      for line in string.gmatch(output, "[^\r\n]+") do
-        if on_stdout then
+      local key = table.concat(cmd, " ")
+      if stubbed_commands[key].use_on_stdout then
+        for line in string.gmatch(stubbed_commands[key].output, "[^\r\n]+") do
           on_stdout(nil, line)
         end
       end
       on_exit({
         signal = 0,
-        code = code or 0,
-        stdout = output,
-      })
-    end
-  end
-
-  ---@param code number
-  ---@param stubbed_cmd string[]
-  ---@param output string
-  local function stub_external_cmd(code, stubbed_cmd, output)
-    if not previous_run_job then
-      previous_run_job = util.run_job
-    end
-    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output }
-    --- @diagnostic disable-next-line: duplicate-set-field
-    util.run_job = function(cmd, _, on_exit)
-      local key = table.concat(cmd, " ")
-      on_exit({
-        signal = 0,
-        stdout = stubbed_commands[key].output,
+        stdout = stubbed_commands[key].use_on_stdout and nil or stubbed_commands[key].output,
         code = stubbed_commands[key].code,
       })
       stubbed_commands[key] = nil
@@ -114,7 +100,16 @@ LLVM Profile Error: Failed to write file "default.profraw": Operation not permit
 note: Run script build phase 'Build number from git' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'CantatasEditor' from project 'Cantatas')
       ]]
 
-    stub_run_job(0, logs)
+    stub_external_cmd(0, {
+      "xcodebuild",
+      "build",
+      "-scheme",
+      "scheme",
+      "-destination",
+      "platform=iOS,id=id",
+      "-configuration",
+      "Debug",
+    }, logs, true)
     ---@type QuickfixEntry[]
     local expected = {
       {
@@ -189,7 +184,6 @@ note: Run script build phase 'Build number from git' will be run during every bu
     }, json)
 
     assert.are.same(0, sut.load_build_settings())
-    -- assert.are.same({}, project.current_project.build_settings)
     assert.are.same("/Users/user/MyProject/MyProject.xcodeproj", project.current_project.path)
     assert.are.same("MyProject", project.current_project.name)
     assert.are.same("MyProduct", project.current_target.name)

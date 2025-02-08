@@ -45,7 +45,7 @@ describe("neoxcd plugin", function()
     if not previous_run_job then
       previous_run_job = util.run_job
     end
-    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output }
+    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = false }
     --- @diagnostic disable-next-line: duplicate-set-field
     util.run_job = function(cmd, _, on_exit)
       local key = table.concat(cmd, " ")
