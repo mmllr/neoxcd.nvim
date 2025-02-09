@@ -55,6 +55,11 @@ local subcommand_tbl = {
       require("neoxcd").open_in_xcode()
     end,
   },
+  debug = {
+    impl = function(args, opts)
+      require("neoxcd").debug()
+    end,
+  },
 }
 
 ---@param opts table :h lua-guide-commands-create

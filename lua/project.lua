@@ -315,4 +315,32 @@ function M.run()
   end
 end
 
+function M.debug()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  elseif M.current_target == nil then
+    return M.ProjectResult.NO_TARGET
+  elseif M.current_project.destination == nil then
+    return M.ProjectResult.NO_DESTINATION
+  end
+  local success, dap = pcall(require, "dap")
+
+  if not success then
+    error("neoxcd.nvim: Could not load nvim-dap plugin")
+    return nil
+  end
+
+  dap.run({
+    name = "macOS Debugger",
+    type = "lldb",
+    request = "launch",
+    cwd = "${workspaceFolder}",
+    program = M.current_target.app_path,
+    args = {},
+    stopOnEntry = false,
+    waitFor = true,
+    env = {},
+  })
+end
+
 return M

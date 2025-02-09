@@ -137,4 +137,12 @@ return {
     end
   end),
   open_in_xcode = nio.create(open_in_xcode),
+  debug = nio.create(function()
+    spinner.start("Debugging project...")
+    local result = project.debug()
+    spinner.stop()
+    if result ~= 0 then
+      vim.notify("Failed to debug project", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    end
+  end),
 }
