@@ -9,7 +9,27 @@ local it = nio.tests.it
 describe("Build logic", function()
   ---@type table<string, StubbedCommand>
   local stubbed_commands = {}
-  local previous_run_job
+
+  before_each(function()
+    stubbed_commands = {}
+    util.setup({
+      run_cmd = function(cmd, on_stdout, on_exit)
+        local key = table.concat(cmd, " ")
+        if stubbed_commands[key].use_on_stdout then
+          for line in string.gmatch(stubbed_commands[key].output, "[^\r\n]+") do
+            on_stdout(nil, line)
+          end
+        end
+        on_exit({
+          signal = 0,
+          stdout = stubbed_commands[key].use_on_stdout and nil or stubbed_commands[key].output,
+          code = stubbed_commands[key].code,
+        })
+        stubbed_commands[key] = nil
+      end,
+    })
+    project.current_project = nil
+  end)
 
   ---@param code number
   ---@param stubbed_cmd string[]
@@ -17,25 +37,7 @@ describe("Build logic", function()
   ---@param use_on_stdout boolean|nil
   local function stub_external_cmd(code, stubbed_cmd, output, use_on_stdout)
     local use = use_on_stdout or false
-    if not previous_run_job then
-      previous_run_job = util.run_job
-    end
     stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = use }
-    --- @diagnostic disable-next-line: duplicate-set-field
-    util.run_job = function(cmd, on_stdout, on_exit)
-      local key = table.concat(cmd, " ")
-      if stubbed_commands[key].use_on_stdout then
-        for line in string.gmatch(stubbed_commands[key].output, "[^\r\n]+") do
-          on_stdout(nil, line)
-        end
-      end
-      on_exit({
-        signal = 0,
-        stdout = stubbed_commands[key].use_on_stdout and nil or stubbed_commands[key].output,
-        code = stubbed_commands[key].code,
-      })
-      stubbed_commands[key] = nil
-    end
   end
 
   ---@param scheme string
@@ -59,11 +61,6 @@ describe("Build logic", function()
       util.run_job = previous_run_job
     end
     previous_run_job = nil
-  end)
-
-  before_each(function()
-    invoked_cmd = nil
-    project.current_project = nil
   end)
 
   after_each(function()

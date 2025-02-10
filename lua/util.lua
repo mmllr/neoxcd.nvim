@@ -1,5 +1,13 @@
 local nio = require("nio")
-local M = {}
+
+---@class UtilOpts
+---@field run_cmd? fun(cmd: string[], on_stdout: fun(error: string?, data: string?)|nil, on_exit: fun(obj: vim.SystemCompleted))
+---@field run_dap? fun(config: dap.Configuration)
+
+local M = {
+  ---@type UtilOpts
+  options = {},
+}
 
 ---@class ExternalCommand
 ---@dfield execute fun(cmd: string[], on_exit: fun(code: number), on_stdout: fun(error: string, data: string))
@@ -19,10 +27,30 @@ end
 ---@param on_stdout fun(error: string?, data: string?)|nil
 ---@param on_exit fun(obj: vim.SystemCompleted)
 function M.run_job(cmd, on_stdout, on_exit)
+  if M.options.run_cmd ~= nil and type(M.options.run_cmd) == "function" then
+    M.options.run_cmd(cmd, on_stdout, on_exit)
+    return
+  end
   vim.system(cmd, {
     text = true,
     stdout = on_stdout or true,
   }, on_exit)
+end
+
+---@type fun(config: dap.Configuration)
+M.run_dap = function(config)
+  if M.options.run_dap and type(M.options.run_dap) == "function" then
+    M.options.run_dap(config)
+    return
+  end
+  local success, dap = pcall(require, "")
+
+  if not success then
+    error("neoxcd.nvim: Could not load nvim-dap plugin")
+    return
+  end
+
+  dap.run(config)
 end
 
 ---Concatenate two tables
@@ -110,6 +138,11 @@ function M.remove_n_components(path, n)
     path = vim.fs.dirname(path)
   end
   return path
+end
+
+---@param opts? UtilOpts
+function M.setup(opts)
+  M.options = opts or {}
 end
 
 return M

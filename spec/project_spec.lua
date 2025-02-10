@@ -1,11 +1,13 @@
 local assert = require("luassert")
 local types = require("types")
+local util = require("util")
 
 describe("neoxcd plugin", function()
   local nio = require("nio")
   local it = nio.tests.it
-  local util = require("util")
   local project = require("project")
+  ---@type table<string, StubbedCommand>
+  local stubbed_commands = {}
 
   ---@param type ProjectType
   ---@param scheme string|nil
@@ -35,39 +37,19 @@ describe("neoxcd plugin", function()
     }
   end
 
-  ---@type table<string, StubbedCommand>
-  local stubbed_commands = {}
-  local previous_run_job
-
-  ---@param code number
-  ---@param stubbed_cmd string[]
-  ---@param output string
-  local function stub_external_cmd(code, stubbed_cmd, output)
-    if not previous_run_job then
-      previous_run_job = util.run_job
-    end
-    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = false }
-    --- @diagnostic disable-next-line: duplicate-set-field
-    util.run_job = function(cmd, _, on_exit)
-      local key = table.concat(cmd, " ")
-      on_exit({
-        signal = 0,
-        stdout = stubbed_commands[key].output,
-        code = stubbed_commands[key].code,
-      })
-      stubbed_commands[key] = nil
-    end
-  end
-
-  teardown(function()
-    if previous_run_job then
-      util.run_job = previous_run_job
-    end
-    previous_run_job = nil
-    project = nil
-  end)
-
   before_each(function()
+    stubbed_commands = {}
+    util.setup({
+      run_cmd = function(cmd, _, on_exit)
+        local key = table.concat(cmd, " ")
+        on_exit({
+          signal = 0,
+          stdout = stubbed_commands[key].output,
+          code = stubbed_commands[key].code,
+        })
+        stubbed_commands[key] = nil
+      end,
+    })
     project.current_project = nil
     project.current_target = nil
   end)
@@ -78,6 +60,17 @@ describe("neoxcd plugin", function()
       {},
       "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands)
     )
+  end)
+
+  ---@param code number
+  ---@param stubbed_cmd string[]
+  ---@param output string
+  local function stub_external_cmd(code, stubbed_cmd, output)
+    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = false }
+  end
+
+  teardown(function()
+    project = nil
   end)
 
   describe("Scheme handling", function()
