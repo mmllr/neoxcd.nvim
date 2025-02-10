@@ -323,14 +323,7 @@ function M.debug()
   elseif M.current_project.destination == nil then
     return M.ProjectResult.NO_DESTINATION
   end
-  local success, dap = pcall(require, "dap")
-
-  if not success then
-    error("neoxcd.nvim: Could not load nvim-dap plugin")
-    return nil
-  end
-
-  dap.run({
+  util.run_dap({
     name = "macOS Debugger",
     type = "lldb",
     request = "launch",

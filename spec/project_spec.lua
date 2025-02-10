@@ -432,4 +432,42 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "open", "/path/to/build/TestApp.app" }, "")
     assert.are.same(0, project.run())
   end)
+
+  describe("Debugging", function()
+    local stubbed_dap = {}
+
+    before_each(function()
+      stubbed_dap = {}
+      util.setup({
+        run_dap = function(conf)
+          stubbed_dap = conf
+        end,
+      })
+    end)
+
+    it("Debugging a macOS Application", function()
+      ---@type Destination
+      local mac_dest = {
+        platform = types.Platform.MACOS,
+        arch = "arm64",
+        name = "My Mac",
+        id = "deadbeef-deadbeefdeadbeef",
+      }
+      givenProject("project", "testScheme", {}, mac_dest)
+      givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
+
+      project.debug()
+      assert.are.same({
+        name = "macOS Debugger",
+        type = "lldb",
+        request = "launch",
+        cwd = "${workspaceFolder}",
+        program = "/path/to/build/TestApp.app",
+        args = {},
+        stopOnEntry = false,
+        waitFor = true,
+        env = {},
+      }, stubbed_dap)
+    end)
+  end)
 end)
