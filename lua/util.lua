@@ -43,7 +43,7 @@ M.run_dap = function(config)
     M.options.run_dap(config)
     return
   end
-  local success, dap = pcall(require, "")
+  local success, dap = pcall(require, "dap")
 
   if not success then
     error("neoxcd.nvim: Could not load nvim-dap plugin")
