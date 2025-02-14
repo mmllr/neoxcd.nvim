@@ -40,6 +40,8 @@ M.ProjectResult = {
 ---@type DestinationCache
 local destinations = {}
 
+local cmd = nio.wrap(util.run_job, 3)
+
 ---Parse the output of `xcodebuild -list -json` into a table of schemes
 ---@param input string
 ---@return string[]
@@ -182,7 +184,7 @@ function M.select_scheme(scheme)
     return M.ProjectResult.OK
   end
   local opts = M.build_options_for_project(p)
-  local result = nio.wrap(util.run_job, 3)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
+  local result = cmd(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
   if result.code == M.ProjectResult.OK then
     M.current_project.scheme = scheme
   end
@@ -202,7 +204,7 @@ function M.load_destinations()
   end
 
   local opts = M.build_options_for_project(p)
-  local result = nio.wrap(util.run_job, 3)(util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts), nil)
+  local result = cmd(util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts), nil)
   if result.code == M.ProjectResult.OK and result.stdout then
     destinations[p.scheme] = parse_destinations(result.stdout)
   end
@@ -231,7 +233,6 @@ function M.open_in_xcode()
   if M.current_project == nil then
     return M.ProjectResult.NO_PROJECT
   end
-  local cmd = nio.wrap(util.run_job, 3)
   local result = cmd({ "xcode-select", "-p" }, nil)
   if result.code ~= M.ProjectResult.OK or result.stdout == nil then
     return M.ProjectResult.NO_XCODE
@@ -247,7 +248,6 @@ end
 ---@param id string
 ---@return ProjectResultCode
 local function boot_simulator(id)
-  local cmd = nio.wrap(util.run_job, 3)
   local result = cmd({ "xcrun", "simctl", "boot", id }, nil)
 
   if result.code ~= M.ProjectResult.OK then
@@ -267,6 +267,19 @@ local function boot_simulator(id)
   return result.code
 end
 
+---Installs the target on the simulator
+---@async
+---@param project Project
+---@param target Target
+---@return ProjectResultCode
+local function install_on_simulator(project, target)
+  local result = cmd({ "xcrun", "simctl", "install", project.destination.id, target.app_path }, nil)
+  if result.code ~= M.ProjectResult.OK then
+    return M.ProjectResult.INSTALL_FAILED
+  end
+  return result.code
+end
+
 ---Runs the current project in the simulator
 ---@async
 ---@param project Project
@@ -279,10 +292,9 @@ local function run_on_simulator(project, target, waitForDebugger)
     return M.ProjectResult.NO_SIMULATOR
   end
 
-  local cmd = nio.wrap(util.run_job, 3)
-  result = cmd({ "xcrun", "simctl", "install", project.destination.id, target.app_path }, nil)
-  if result.code ~= M.ProjectResult.OK then
-    return M.ProjectResult.INSTALL_FAILED
+  result = install_on_simulator(project, target)
+  if result ~= M.ProjectResult.OK then
+    return result
   end
   result = cmd(
     util.lst_remove_nil_values({
@@ -305,7 +317,6 @@ end
 ---@param target Target
 ---@return ProjectResultCode
 local function run_on_mac(target)
-  local cmd = nio.wrap(util.run_job, 3)
   local result = cmd({ "open", target.app_path })
   return result.code
 end
