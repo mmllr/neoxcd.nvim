@@ -412,7 +412,15 @@ describe("neoxcd plugin", function()
     )
     stub_external_cmd(
       0,
-      { "xcrun", "simctl", "launch", "78379CC1-79BE-4C8B-ACAD-730424A40DFC", "com.test.TestApp" },
+      {
+        "xcrun",
+        "simctl",
+        "launch",
+        "--terminate-running-process",
+        "--console-pty",
+        "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
+        "com.test.TestApp",
+      },
       ""
     )
 

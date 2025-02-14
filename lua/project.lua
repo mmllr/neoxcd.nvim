@@ -281,7 +281,18 @@ local function run_on_simulator(project, target)
   if result.code ~= M.ProjectResult.OK then
     return M.ProjectResult.INSTALL_FAILED
   end
-  result = cmd({ "xcrun", "simctl", "launch", project.destination.id, target.bundle_id }, nil)
+  result = cmd(
+    {
+      "xcrun",
+      "simctl",
+      "launch",
+      "--terminate-running-process",
+      "--console-pty",
+      project.destination.id,
+      target.bundle_id,
+    },
+    nil
+  )
   return result.code
 end
 
