@@ -182,8 +182,7 @@ function M.select_scheme(scheme)
     return M.ProjectResult.OK
   end
   local opts = M.build_options_for_project(p)
-  local result =
-    nio.wrap(util.run_job, 3)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
+  local result = nio.wrap(util.run_job, 3)(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
   if result.code == M.ProjectResult.OK then
     M.current_project.scheme = scheme
   end
@@ -203,10 +202,7 @@ function M.load_destinations()
   end
 
   local opts = M.build_options_for_project(p)
-  local result = nio.wrap(util.run_job, 3)(
-    util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts),
-    nil
-  )
+  local result = nio.wrap(util.run_job, 3)(util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts), nil)
   if result.code == M.ProjectResult.OK and result.stdout then
     destinations[p.scheme] = parse_destinations(result.stdout)
   end
@@ -260,8 +256,9 @@ end
 ---@async
 ---@param project Project
 ---@param target Target
+---@param waitForDebugger boolean
 ---@return ProjectResultCode
-local function run_on_simulator(project, target)
+local function run_on_simulator(project, target, waitForDebugger)
   local result = boot_simulator(project.destination.id)
   if result ~= M.ProjectResult.OK then
     return M.ProjectResult.NO_SIMULATOR
@@ -282,15 +279,16 @@ local function run_on_simulator(project, target)
     return M.ProjectResult.INSTALL_FAILED
   end
   result = cmd(
-    {
+    util.lst_remove_nil_values({
       "xcrun",
       "simctl",
       "launch",
       "--terminate-running-process",
       "--console-pty",
+      waitForDebugger and "--wait-for-debugger" or nil,
       project.destination.id,
       target.bundle_id,
-    },
+    }),
     nil
   )
   return result.code
@@ -318,7 +316,7 @@ function M.run()
     return M.ProjectResult.NO_DESTINATION
   end
   if M.current_project.destination.platform == types.Platform.IOS_SIMULATOR then
-    return run_on_simulator(M.current_project, M.current_target)
+    return run_on_simulator(M.current_project, M.current_target, false)
   elseif M.current_project.destination.platform == types.Platform.MACOS then
     return run_on_mac(M.current_target)
   else
@@ -326,6 +324,49 @@ function M.run()
   end
 end
 
+---@param program string
+local function ios_dap_config(program)
+  return {
+    {
+      name = "iOS App Debugger",
+      type = "lldb",
+      request = "attach",
+      program = program,
+      cwd = "${workspaceFolder}",
+      stopOnEntry = false,
+      waitFor = true,
+    },
+  }
+end
+
+---@param program string
+local function macos_dap_config(program)
+  return {
+    name = "macOS Debugger",
+    type = "lldb",
+    request = "launch",
+    cwd = "${workspaceFolder}",
+    program = program,
+    args = {},
+    stopOnEntry = false,
+    waitFor = true,
+    env = {},
+  }
+end
+
+---@async
+---@param project  Project
+---@param target Target
+---@return ProjectResultCode
+local function debug_on_simulator(project, target)
+  util.run_dap(ios_dap_config(target.app_path))
+
+  return run_on_simulator(project, target, true)
+end
+
+---Debugs the current project
+---@async
+---@return ProjectResultCode
 function M.debug()
   if M.current_project == nil then
     return M.ProjectResult.NO_PROJECT
@@ -334,17 +375,13 @@ function M.debug()
   elseif M.current_project.destination == nil then
     return M.ProjectResult.NO_DESTINATION
   end
-  util.run_dap({
-    name = "macOS Debugger",
-    type = "lldb",
-    request = "launch",
-    cwd = "${workspaceFolder}",
-    program = M.current_target.app_path,
-    args = {},
-    stopOnEntry = false,
-    waitFor = true,
-    env = {},
-  })
+  if M.current_project.destination.platform == types.Platform.IOS_SIMULATOR then
+    return debug_on_simulator(M.current_project, M.current_target)
+  elseif M.current_project.destination.platform == types.Platform.MACOS then
+    util.run_dap(macos_dap_config(M.current_target.app_path))
+  end
+
+  return M.ProjectResult.OK
 end
 
 return M

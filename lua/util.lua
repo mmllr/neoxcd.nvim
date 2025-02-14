@@ -68,6 +68,24 @@ function M.concat(lhs, rhs)
   return result
 end
 
+---Removes nil values from a table
+---@param array any[]
+---@return any[]
+function M.lst_remove_nil_values(array)
+  if #array == 0 then
+    return array
+  end
+  local result = {}
+
+  for i = 1, #array do
+    if array[i] ~= nil then
+      table.insert(result, array[i])
+    end
+  end
+
+  return result
+end
+
 ---Get the symbol for a platform
 ---@param name string
 ---@param platform "iOS" | "macOS" | "tvOS" | "watchOS" | "Simulator" | "DriverKit"

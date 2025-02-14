@@ -55,11 +55,7 @@ describe("neoxcd plugin", function()
   end)
 
   after_each(function()
-    assert.are.same(
-      stubbed_commands,
-      {},
-      "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands)
-    )
+    assert.are.same(stubbed_commands, {}, "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands))
   end)
 
   ---@param code number
@@ -154,13 +150,9 @@ describe("neoxcd plugin", function()
       assert.are.same(expected, project.current_project.schemes)
     end)
 
-    it("Selectin a scheme will update the xcode build server", function()
+    it("Selecting a scheme will update the xcode build server", function()
       givenProject("project", nil, { "schemeA", "SchemeB", "schemeC" })
-      stub_external_cmd(
-        0,
-        { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" },
-        ""
-      )
+      stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" }, "")
 
       assert.are.same(0, project.select_scheme("schemeB"))
       assert.are.same("schemeB", project.current_project.scheme)
@@ -349,11 +341,7 @@ describe("neoxcd plugin", function()
       ]]
 
     givenProject("project", "testScheme")
-    stub_external_cmd(
-      0,
-      { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" },
-      output
-    )
+    stub_external_cmd(0, { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" }, output)
 
     local destinations = {
       {
@@ -405,24 +393,16 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer\n")
     stub_external_cmd(0, { "xcrun", "simctl", "boot", "78379CC1-79BE-4C8B-ACAD-730424A40DFC" }, "")
     stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app/Contents/Developer/Applications/Simulator.app" }, "")
-    stub_external_cmd(
-      0,
-      { "xcrun", "simctl", "install", "78379CC1-79BE-4C8B-ACAD-730424A40DFC", "/path/to/build/TestApp.app" },
-      ""
-    )
-    stub_external_cmd(
-      0,
-      {
-        "xcrun",
-        "simctl",
-        "launch",
-        "--terminate-running-process",
-        "--console-pty",
-        "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
-        "com.test.TestApp",
-      },
-      ""
-    )
+    stub_external_cmd(0, { "xcrun", "simctl", "install", "78379CC1-79BE-4C8B-ACAD-730424A40DFC", "/path/to/build/TestApp.app" }, "")
+    stub_external_cmd(0, {
+      "xcrun",
+      "simctl",
+      "launch",
+      "--terminate-running-process",
+      "--console-pty",
+      "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
+      "com.test.TestApp",
+    }, "")
 
     assert.are.same(0, project.run())
   end)
@@ -453,7 +433,7 @@ describe("neoxcd plugin", function()
       })
     end)
 
-    it("Debugging a macOS Application", function()
+    it("Debugging a macOS application", function()
       ---@type Destination
       local mac_dest = {
         platform = types.Platform.MACOS,
@@ -464,7 +444,7 @@ describe("neoxcd plugin", function()
       givenProject("project", "testScheme", {}, mac_dest)
       givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
 
-      project.debug()
+      assert.are.same(0, project.debug())
       assert.are.same({
         name = "macOS Debugger",
         type = "lldb",
@@ -475,6 +455,46 @@ describe("neoxcd plugin", function()
         stopOnEntry = false,
         waitFor = true,
         env = {},
+      }, stubbed_dap)
+    end)
+
+    it("Debugging an iOS simulator application", function()
+      ---@type Destination
+      local sim = {
+        platform = "iOS Simulator",
+        id = "deadbeef-deadbeefdeadbeef",
+        name = "iPhone 16 Pro",
+      }
+      givenProject("project", "testScheme", {}, sim)
+      givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
+
+      stub_external_cmd(0, { "xcrun", "simctl", "boot", sim.id }, "")
+      stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer\n")
+      stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app/Contents/Developer/Applications/Simulator.app" }, "")
+      stub_external_cmd(0, { "xcrun", "simctl", "install", sim.id, "/path/to/build/TestApp.app" }, "")
+      stub_external_cmd(0, {
+        "xcrun",
+        "simctl",
+        "launch",
+        "--terminate-running-process",
+        "--console-pty",
+        "--wait-for-debugger",
+        sim.id,
+        "com.test.TestApp",
+      }, "")
+
+      assert.are.same(0, project.debug())
+
+      assert.are.same({
+        {
+          name = "iOS App Debugger",
+          type = "lldb",
+          request = "attach",
+          program = "/path/to/build/TestApp.app",
+          cwd = "${workspaceFolder}",
+          stopOnEntry = false,
+          waitFor = true,
+        },
       }, stubbed_dap)
     end)
   end)
