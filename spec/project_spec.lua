@@ -384,7 +384,7 @@ describe("neoxcd plugin", function()
   it("Running a target on simulator", function()
     ---@type Destination
     local simulator_dest = {
-      platform = "iOS Simulator",
+      platform = types.Platform.IOS_SIMULATOR,
       id = "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
       name = "iPhone 16 Pro",
     }
@@ -430,10 +430,20 @@ describe("neoxcd plugin", function()
         run_dap = function(conf)
           stubbed_dap = conf
         end,
+
+        run_cmd = function(cmd, _, on_exit)
+          local key = table.concat(cmd, " ")
+          on_exit({
+            signal = 0,
+            stdout = stubbed_commands[key].output,
+            code = stubbed_commands[key].code,
+          })
+          stubbed_commands[key] = nil
+        end,
       })
     end)
 
-    it("Debugging a macOS application", function()
+    it("macOS application", function()
       ---@type Destination
       local mac_dest = {
         platform = types.Platform.MACOS,
@@ -458,10 +468,10 @@ describe("neoxcd plugin", function()
       }, stubbed_dap)
     end)
 
-    it("Debugging an iOS simulator application", function()
+    it("iOS simulator application", function()
       ---@type Destination
       local sim = {
-        platform = "iOS Simulator",
+        platform = types.Platform.IOS_SIMULATOR,
         id = "deadbeef-deadbeefdeadbeef",
         name = "iPhone 16 Pro",
       }

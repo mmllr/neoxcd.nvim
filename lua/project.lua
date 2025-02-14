@@ -249,6 +249,21 @@ end
 local function boot_simulator(id)
   local cmd = nio.wrap(util.run_job, 3)
   local result = cmd({ "xcrun", "simctl", "boot", id }, nil)
+
+  if result.code ~= M.ProjectResult.OK then
+    error("Failed to open simulator" .. result.code)
+    return result.code
+  end
+  result = cmd({ "xcode-select", "-p" })
+  if result.code ~= M.ProjectResult.OK or result.stdout == nil then
+    return M.ProjectResult.NO_XCODE
+  end
+  local simulator_path = string.gsub(result.stdout, "\n", "/Applications/Simulator.app")
+  result = cmd({ "open", simulator_path })
+  if result.code ~= M.ProjectResult.OK then
+    error("Failed to open simulator")
+    return M.ProjectResult.NO_SIMULATOR
+  end
   return result.code
 end
 
@@ -265,15 +280,6 @@ local function run_on_simulator(project, target, waitForDebugger)
   end
 
   local cmd = nio.wrap(util.run_job, 3)
-  result = cmd({ "xcode-select", "-p" })
-  if result.code ~= M.ProjectResult.OK or result.stdout == nil then
-    return M.ProjectResult.NO_XCODE
-  end
-  local simulator_path = string.gsub(result.stdout, "\n", "/Applications/Simulator.app")
-  result = cmd({ "open", simulator_path })
-  if result.code ~= M.ProjectResult.OK then
-    return M.ProjectResult.NO_SIMULATOR
-  end
   result = cmd({ "xcrun", "simctl", "install", project.destination.id, target.app_path }, nil)
   if result.code ~= M.ProjectResult.OK then
     return M.ProjectResult.INSTALL_FAILED
@@ -360,7 +366,6 @@ end
 ---@return ProjectResultCode
 local function debug_on_simulator(project, target)
   util.run_dap(ios_dap_config(target.app_path))
-
   return run_on_simulator(project, target, true)
 end
 
