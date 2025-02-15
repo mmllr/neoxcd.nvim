@@ -1,6 +1,7 @@
 local assert = require("luassert")
 local types = require("types")
 local util = require("util")
+local helpers = require("spec/helpers")
 
 describe("neoxcd plugin", function()
   local nio = require("nio")
@@ -40,15 +41,7 @@ describe("neoxcd plugin", function()
   before_each(function()
     stubbed_commands = {}
     util.setup({
-      run_cmd = function(cmd, _, on_exit)
-        local key = table.concat(cmd, " ")
-        on_exit({
-          signal = 0,
-          stdout = stubbed_commands[key].output,
-          code = stubbed_commands[key].code,
-        })
-        stubbed_commands[key] = nil
-      end,
+      run_cmd = helpers.setup_run_cmd(stubbed_commands),
     })
     project.current_project = nil
     project.current_target = nil
@@ -58,7 +51,7 @@ describe("neoxcd plugin", function()
     assert.are.same(stubbed_commands, {}, "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands))
   end)
 
-  ---@param code number
+  ---@param code number|number[]
   ---@param stubbed_cmd string[]
   ---@param output string
   local function stub_external_cmd(code, stubbed_cmd, output)
@@ -393,7 +386,7 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer\n")
     stub_external_cmd(0, { "xcrun", "simctl", "boot", simulator_dest.id }, "")
     stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app/Contents/Developer/Applications/Simulator.app" }, "")
-    stub_external_cmd(0, { "xcrun", "simctl", "install", simulator_dest.id, "/path/to/build/TestApp.app" }, "")
+    stub_external_cmd({ 149, 0 }, { "xcrun", "simctl", "install", simulator_dest.id, "/path/to/build/TestApp.app" }, "")
     stub_external_cmd(0, {
       "xcrun",
       "simctl",
@@ -431,15 +424,7 @@ describe("neoxcd plugin", function()
           stubbed_dap = conf
         end,
 
-        run_cmd = function(cmd, _, on_exit)
-          local key = table.concat(cmd, " ")
-          on_exit({
-            signal = 0,
-            stdout = stubbed_commands[key].output,
-            code = stubbed_commands[key].code,
-          })
-          stubbed_commands[key] = nil
-        end,
+        run_cmd = helpers.setup_run_cmd(stubbed_commands),
       })
     end)
 
@@ -481,7 +466,7 @@ describe("neoxcd plugin", function()
       stub_external_cmd(0, { "xcrun", "simctl", "boot", sim.id }, "")
       stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer\n")
       stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app/Contents/Developer/Applications/Simulator.app" }, "")
-      stub_external_cmd(0, { "xcrun", "simctl", "install", sim.id, "/path/to/build/TestApp.app" }, "")
+      stub_external_cmd({ 149, 0 }, { "xcrun", "simctl", "install", sim.id, "/path/to/build/TestApp.app" }, "")
       stub_external_cmd(0, {
         "xcrun",
         "simctl",

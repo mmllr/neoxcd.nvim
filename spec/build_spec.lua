@@ -4,6 +4,7 @@ local project = require("project")
 local util = require("util")
 local sut = require("xcode")
 local types = require("types")
+local helpers = require("spec/helpers")
 local it = nio.tests.it
 
 describe("Build logic", function()
@@ -13,20 +14,7 @@ describe("Build logic", function()
   before_each(function()
     stubbed_commands = {}
     util.setup({
-      run_cmd = function(cmd, on_stdout, on_exit)
-        local key = table.concat(cmd, " ")
-        if stubbed_commands[key].use_on_stdout then
-          for line in string.gmatch(stubbed_commands[key].output, "[^\r\n]+") do
-            on_stdout(nil, line)
-          end
-        end
-        on_exit({
-          signal = 0,
-          stdout = stubbed_commands[key].use_on_stdout and nil or stubbed_commands[key].output,
-          code = stubbed_commands[key].code,
-        })
-        stubbed_commands[key] = nil
-      end,
+      run_cmd = helpers.setup_run_cmd(stubbed_commands),
     })
     project.current_project = nil
   end)
@@ -66,11 +54,7 @@ describe("Build logic", function()
   after_each(function()
     project.current_project = nil
     project.current_target = nil
-    assert.are.same(
-      stubbed_commands,
-      {},
-      "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands)
-    )
+    assert.are.same(stubbed_commands, {}, "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands))
   end)
 
   it("parses logs without build errors", function()

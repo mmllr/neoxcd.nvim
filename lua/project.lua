@@ -251,13 +251,8 @@ end
 ---@param waitForDebugger boolean
 ---@return ProjectResultCode
 local function run_on_simulator(project, target, waitForDebugger)
-  local result = simulator.boot_simulator(project.destination)
+  local result = simulator.install_on_simulator(project.destination, target.app_path)
   if result ~= simulator.SimulatorResult.OK then
-    return M.ProjectResult.NO_SIMULATOR
-  end
-
-  result = simulator.install_on_simulator(project.destination, target.app_path)
-  if result ~= M.ProjectResult.OK then
     return result
   end
   result = cmd(

@@ -10,13 +10,11 @@ local M = {}
 ---| -2
 ---| -3
 ---| -4
----| 148
 ---| 149
 
 ---@class SimulatorResultCodeConstants
 ---@field OK SimulatorResultCode
----@field BOOT_FAILED SimulatorResultCode
----@field ALREADY_OPEN SimulatorResultCode
+---@field SIM_CTL_ERROR SimulatorResultCode
 ---@field NO_XCODE SimulatorResultCode
 ---@field NO_SIMULATOR SimulatorResultCode
 ---@field INSTALL_FAILED SimulatorResultCode
@@ -29,8 +27,7 @@ M.SimulatorResult = {
   NO_SIMULATOR = -2,
   INSTALL_FAILED = -3,
   INVALID_DESTINATION = -4,
-  BOOT_FAILED = 148,
-  ALREADY_OPEN = 149,
+  SIM_CTL_ERROR = 149,
 }
 
 local cmd = nio.wrap(util.run_job, 3)
@@ -61,7 +58,7 @@ function M.boot_simulator(destination)
   end
   local result = cmd({ "xcrun", "simctl", "boot", destination.id }, nil)
   if result.code ~= M.SimulatorResult.OK then
-    return M.SimulatorResult.BOOT_FAILED
+    return result.code
   end
 
   return open_simulator_app()
@@ -74,8 +71,14 @@ end
 ---@return SimulatorResultCode
 function M.install_on_simulator(destination, app_path)
   local result = cmd({ "xcrun", "simctl", "install", destination.id, app_path }, nil)
-  if result.code ~= M.SimulatorResult.OK then
-    return M.SimulatorResult.INSTALL_FAILED
+  if result.code == M.SimulatorResult.SIM_CTL_ERROR then
+    --- try to boot the simulator
+    result = M.boot_simulator(destination)
+    if result == M.SimulatorResult.OK then
+      return M.install_on_simulator(destination, app_path)
+    else
+      return M.SimulatorResult.INSTALL_FAILED
+    end
   end
   return result.code
 end
