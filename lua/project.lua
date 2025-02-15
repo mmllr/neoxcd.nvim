@@ -15,6 +15,7 @@ local M = {}
 ---| -5
 ---| -6
 ---| -7
+---| -8
 
 ---@class ProjectResultConstants
 ---@field OK ProjectResultCode
@@ -25,6 +26,7 @@ local M = {}
 ---@field NO_SIMULATOR ProjectResultCode
 ---@field NO_XCODE ProjectResultCode
 ---@field INSTALL_FAILED ProjectResultCode
+---@field NO_PROCESS ProjectResultCode
 
 ---@type ProjectResultConstants
 M.ProjectResult = {
@@ -36,6 +38,7 @@ M.ProjectResult = {
   NO_SIMULATOR = -5,
   NO_XCODE = -6,
   INSTALL_FAILED = -7,
+  NO_PROCESS = -8,
 }
 
 ---@type DestinationCache
@@ -357,6 +360,27 @@ function M.debug()
   end
 
   return M.ProjectResult.OK
+end
+
+---Stops the currently running target
+---@async
+---@return ProjectResultCode
+function M.stop()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  elseif M.current_target == nil then
+    return M.ProjectResult.NO_TARGET
+  end
+  local result = cmd({ "pgrep", M.current_target.name }, nil)
+  if result.code == 0 and result.stdout then
+    local pid = tonumber(result.stdout)
+    if not pid then
+      return M.ProjectResult.NO_PROCESS
+    end
+
+    result = cmd({ "kill", "-9", pid }, nil)
+  end
+  return result.code
 end
 
 return M

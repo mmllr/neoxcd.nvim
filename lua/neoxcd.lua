@@ -145,4 +145,12 @@ return {
       vim.notify("Failed to debug project", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     end
   end),
+  stop = nio.create(function()
+    spinner.start("Stopping running target...")
+    local result = project.stop()
+    if result ~= 0 then
+      vim.notify("Failed to stop running target, result: " .. result, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    end
+    spinner.stop()
+  end),
 }

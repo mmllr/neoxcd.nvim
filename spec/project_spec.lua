@@ -28,13 +28,15 @@ describe("neoxcd plugin", function()
 
   ---@param path string
   ---@param bundle_id string
-  local function givenTarget(path, bundle_id)
+  ---@param name string|nil
+  local function givenTarget(path, bundle_id, name)
+    local n = name or "TestApp"
     project.current_target = {
       app_path = path,
       bundle_id = bundle_id,
-      name = "TestApp",
-      plist = "TestApp/Info.plist",
-      module_name = "TestApp",
+      name = n,
+      plist = n .. "/Info.plist",
+      module_name = n,
     }
   end
 
@@ -412,6 +414,37 @@ describe("neoxcd plugin", function()
     givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
     stub_external_cmd(0, { "open", "/path/to/build/TestApp.app" }, "")
     assert.are.same(0, project.run())
+  end)
+
+  it("Stopping a running macOS app", function()
+    ---@type Destination
+    local mac_dest = {
+      platform = types.Platform.MACOS,
+      arch = "arm64",
+      name = "My Mac",
+      id = "deadbeef-deadbeefdeadbeef",
+    }
+    givenProject("project", "testScheme", {}, mac_dest)
+    givenTarget("/path/to/build/TestApp.app", "com.test.TestApp", "AppName")
+    stub_external_cmd(0, { "pgrep", "AppName" }, "42")
+    stub_external_cmd(0, { "kill", "-9", "42" }, "")
+
+    assert.are.same(0, project.stop())
+  end)
+
+  it("Stopping a running simulator app", function()
+    ---@type Destination
+    local dest = {
+      platform = types.Platform.IOS_SIMULATOR,
+      name = "iPhone 16 Pro",
+      id = "deadbeef-deadbeefdeadbeef",
+    }
+    givenProject("project", "testScheme", {}, dest)
+    givenTarget("/path/to/build/TestApp.app", "com.test.TestApp", "AppName")
+    stub_external_cmd(0, { "pgrep", "AppName" }, "42\n\n")
+    stub_external_cmd(0, { "kill", "-9", "42" }, "")
+
+    assert.are.same(0, project.stop())
   end)
 
   describe("Debugging", function()

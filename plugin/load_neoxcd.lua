@@ -60,6 +60,11 @@ local subcommand_tbl = {
       require("neoxcd").debug()
     end,
   },
+  stop = {
+    impl = function(args, opts)
+      require("neoxcd").stop()
+    end,
+  },
 }
 
 ---@param opts table :h lua-guide-commands-create

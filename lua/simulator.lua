@@ -36,12 +36,12 @@ local cmd = nio.wrap(util.run_job, 3)
 ---@async
 ---@return SimulatorResultCode
 local function open_simulator_app()
-  local result = cmd({ "xcode-select", "-p" })
+  local result = cmd({ "xcode-select", "-p" }, nil)
   if result.code ~= M.SimulatorResult.OK or result.stdout == nil then
     return M.SimulatorResult.NO_XCODE
   end
   local simulator_path = string.gsub(result.stdout, "\n", "/Applications/Simulator.app")
-  result = cmd({ "open", simulator_path })
+  result = cmd({ "open", simulator_path }, nil)
   if result.code ~= M.SimulatorResult.OK then
     return M.SimulatorResult.NO_SIMULATOR
   end
