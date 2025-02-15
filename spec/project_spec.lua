@@ -381,7 +381,7 @@ describe("neoxcd plugin", function()
     assert.are.same(0, project.open_in_xcode())
   end)
 
-  it("Running a target on simulator", function()
+  it("Running a target on simulator with no simulator booted", function()
     ---@type Destination
     local simulator_dest = {
       platform = types.Platform.IOS_SIMULATOR,
@@ -391,16 +391,16 @@ describe("neoxcd plugin", function()
     givenProject("project", "testScheme", {}, simulator_dest)
     givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
     stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer\n")
-    stub_external_cmd(0, { "xcrun", "simctl", "boot", "78379CC1-79BE-4C8B-ACAD-730424A40DFC" }, "")
+    stub_external_cmd(0, { "xcrun", "simctl", "boot", simulator_dest.id }, "")
     stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app/Contents/Developer/Applications/Simulator.app" }, "")
-    stub_external_cmd(0, { "xcrun", "simctl", "install", "78379CC1-79BE-4C8B-ACAD-730424A40DFC", "/path/to/build/TestApp.app" }, "")
+    stub_external_cmd(0, { "xcrun", "simctl", "install", simulator_dest.id, "/path/to/build/TestApp.app" }, "")
     stub_external_cmd(0, {
       "xcrun",
       "simctl",
       "launch",
       "--terminate-running-process",
       "--console-pty",
-      "78379CC1-79BE-4C8B-ACAD-730424A40DFC",
+      simulator_dest.id,
       "com.test.TestApp",
     }, "")
 
