@@ -1,11 +1,12 @@
 local nio = require("nio")
 local util = require("util")
 local types = require("types")
+local simulator = require("simulator")
 
 local M = {}
 
 ---Result code enum
----@alias ProjectResultCode number
+---@alias ProjectResultCode integer
 ---| 0
 ---| -1
 ---| -2
@@ -243,43 +244,6 @@ function M.open_in_xcode()
   return result.code
 end
 
----Boots the current simulator
----@async
----@param id string
----@return ProjectResultCode
-local function boot_simulator(id)
-  local result = cmd({ "xcrun", "simctl", "boot", id }, nil)
-
-  if result.code ~= M.ProjectResult.OK then
-    error("Failed to open simulator" .. result.code)
-    return result.code
-  end
-  result = cmd({ "xcode-select", "-p" })
-  if result.code ~= M.ProjectResult.OK or result.stdout == nil then
-    return M.ProjectResult.NO_XCODE
-  end
-  local simulator_path = string.gsub(result.stdout, "\n", "/Applications/Simulator.app")
-  result = cmd({ "open", simulator_path })
-  if result.code ~= M.ProjectResult.OK then
-    error("Failed to open simulator")
-    return M.ProjectResult.NO_SIMULATOR
-  end
-  return result.code
-end
-
----Installs the target on the simulator
----@async
----@param project Project
----@param target Target
----@return ProjectResultCode
-local function install_on_simulator(project, target)
-  local result = cmd({ "xcrun", "simctl", "install", project.destination.id, target.app_path }, nil)
-  if result.code ~= M.ProjectResult.OK then
-    return M.ProjectResult.INSTALL_FAILED
-  end
-  return result.code
-end
-
 ---Runs the current project in the simulator
 ---@async
 ---@param project Project
@@ -287,12 +251,12 @@ end
 ---@param waitForDebugger boolean
 ---@return ProjectResultCode
 local function run_on_simulator(project, target, waitForDebugger)
-  local result = boot_simulator(project.destination.id)
-  if result ~= M.ProjectResult.OK then
+  local result = simulator.boot_simulator(project.destination)
+  if result ~= simulator.SimulatorResult.OK then
     return M.ProjectResult.NO_SIMULATOR
   end
 
-  result = install_on_simulator(project, target)
+  result = simulator.install_on_simulator(project.destination, target.app_path)
   if result ~= M.ProjectResult.OK then
     return result
   end
