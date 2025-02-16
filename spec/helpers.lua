@@ -37,4 +37,13 @@ return {
       stubbed_commands[key] = nil
     end
   end,
+
+  ---Stubs file reads
+  ---@param files table<string, string>
+  ---@return async fun(path: string): string?
+  stub_file_read = function(files)
+    return function(path)
+      return files[path]
+    end
+  end,
 }

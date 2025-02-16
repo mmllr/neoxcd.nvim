@@ -9,6 +9,7 @@ describe("neoxcd plugin", function()
   local project = require("project")
   ---@type table<string, StubbedCommand>
   local stubbed_commands = {}
+  local files = {}
 
   ---@param type ProjectType
   ---@param scheme string|nil
@@ -23,6 +24,7 @@ describe("neoxcd plugin", function()
       schemes = schemes or {},
       scheme = scheme,
       destinations = destinations or {},
+      tests = {},
     }
   end
 
@@ -44,6 +46,7 @@ describe("neoxcd plugin", function()
     stubbed_commands = {}
     util.setup({
       run_cmd = helpers.setup_run_cmd(stubbed_commands),
+      read_file = helpers.stub_file_read(files),
     })
     project.current_project = nil
     project.current_target = nil
@@ -456,8 +459,8 @@ describe("neoxcd plugin", function()
         run_dap = function(conf)
           stubbed_dap = conf
         end,
-
         run_cmd = helpers.setup_run_cmd(stubbed_commands),
+        read_file = helpers.stub_file_read(files),
       })
     end)
 
@@ -524,6 +527,120 @@ describe("neoxcd plugin", function()
           waitFor = true,
         },
       }, stubbed_dap)
+    end)
+
+    describe("Testing", function()
+      it("Discovers tests", function()
+        local json = [[
+{
+  "errors" : [
+  ],
+  "values" : [
+    {
+      "children": [
+      {
+          "name": "Target",
+          "kind": "target",
+          "disabled": false,
+          "children": [
+            {
+              "children": [
+                {
+                "children": [],
+                "name": "testA",
+                "kind": "test",
+                "disabled": false
+                },
+                {
+                "children": [],
+                "name": "testB",
+                "kind": "test",
+                "disabled": false
+                }
+              ],
+              "name": "TestClassName",
+              "kind": "class",
+              "disabled": false
+            }
+          ]
+      }
+      ],
+      "disabled" : false,
+      "kind" : "plan",
+      "name" : "PlanName"
+    }
+  ]
+}
+        ]]
+
+        ---@type Destination
+        local sim = {
+          platform = types.Platform.IOS_SIMULATOR,
+          id = "deadbeef-deadbeefdeadbeef",
+          name = "iPhone 16 Pro",
+        }
+        givenProject("project", "testScheme", {}, sim)
+        ---@diagnostic disable-next-line: duplicate-set-field
+        util.get_cwd = function()
+          return "/cwd"
+        end
+        files["/cwd/.neoxcd/tests.json"] = json
+        stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/tests.json" }, "")
+        stub_external_cmd(0, {
+          "xcodebuild",
+          "test-without-building",
+          "-scheme",
+          "testScheme",
+          "-destination",
+          'platform="iOS Simulator",id=deadbeef-deadbeefdeadbeef',
+          "-enumerate-tests",
+          "-test-enumeration-format",
+          "json",
+          "-test-enumeration-output-path",
+          "/cwd/.neoxcd/tests.json",
+          "-test-enumeration-style",
+          "hierarchical",
+          "-disableAutomaticPackageResolution",
+          "-skipPackageUpdates",
+        }, "")
+
+        assert.are.same(0, project.discover_tests())
+        assert.are.same({
+          {
+            children = {
+              {
+                name = "Target",
+                kind = "target",
+                disabled = false,
+                children = {
+                  {
+                    name = "TestClassName",
+                    kind = "class",
+                    disabled = false,
+                    children = {
+                      {
+                        name = "testA",
+                        kind = "test",
+                        disabled = false,
+                        children = {},
+                      },
+                      {
+                        name = "testB",
+                        kind = "test",
+                        disabled = false,
+                        children = {},
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            name = "PlanName",
+            kind = "plan",
+            disabled = false,
+          },
+        }, project.current_project.tests)
+      end)
     end)
   end)
 end)

@@ -7,15 +7,6 @@ local M = {}
 
 ---Result code enum
 ---@alias ProjectResultCode integer
----| 0
----| -1
----| -2
----| -3
----| -4
----| -5
----| -6
----| -7
----| -8
 
 ---@class ProjectResultConstants
 ---@field OK ProjectResultCode
@@ -27,6 +18,8 @@ local M = {}
 ---@field NO_XCODE ProjectResultCode
 ---@field INSTALL_FAILED ProjectResultCode
 ---@field NO_PROCESS ProjectResultCode
+---@field NO_TESTS ProjectResultCode
+---@field INVALID_JSON ProjectResultCode
 
 ---@type ProjectResultConstants
 M.ProjectResult = {
@@ -39,6 +32,8 @@ M.ProjectResult = {
   NO_XCODE = -6,
   INSTALL_FAILED = -7,
   NO_PROCESS = -8,
+  NO_TESTS = -9,
+  INVALID_JSON = -10,
 }
 
 ---@type DestinationCache
@@ -101,6 +96,18 @@ local function parse_destinations(text)
   end
 
   return result
+end
+
+---@return ProjectResultCode
+local function ensure_valid()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  elseif M.current_target == nil then
+    return M.ProjectResult.NO_TARGET
+  elseif M.current_project.destination == nil then
+    return M.ProjectResult.NO_DESTINATION
+  end
+  return M.ProjectResult.OK
 end
 
 ---@type Project|nil
@@ -381,6 +388,65 @@ function M.stop()
     result = cmd({ "kill", "-9", pid }, nil)
   end
   return result.code
+end
+
+---Discover tests in the current project
+---@async
+---@return ProjectResultCode
+function M.discover_tests()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  elseif M.current_project.destination == nil then
+    return M.ProjectResult.NO_DESTINATION
+  end
+
+  M.current_project.tests = {}
+  local output = util.get_cwd() .. "/.neoxcd/tests.json"
+  cmd({ "rm", "-rf", output }, nil)
+
+  local build_cmd = {
+    "xcodebuild",
+    "test-without-building",
+    "-scheme",
+    M.current_project.scheme,
+    "-destination",
+    util.format_destination_for_build(M.current_project.destination),
+    "-enumerate-tests",
+    "-test-enumeration-format",
+    "json",
+    "-test-enumeration-output-path",
+    output,
+    "-test-enumeration-style",
+    "hierarchical",
+    "-disableAutomaticPackageResolution",
+    "-skipPackageUpdates",
+  }
+  local result = cmd(build_cmd, nil)
+
+  if result.code ~= 0 then
+    return result.code
+  end
+
+  local json = util.read_file(output)
+  if json == nil then
+    return M.ProjectResult.NO_TESTS
+  end
+
+  local data = vim.json.decode(json, {
+    luanil = {
+      object = true,
+      array = true,
+    },
+  })
+  if data == nil or data.values == nil then
+    return M.ProjectResult.INVALID_JSON
+  end
+  M.current_project.tests = data.values
+  return result.code
+end
+
+function M.show_runner()
+  vim.cmd("botright 42vsplit Test Explorer")
 end
 
 return M

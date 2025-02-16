@@ -3,6 +3,8 @@ local nio = require("nio")
 ---@class UtilOpts
 ---@field run_cmd? fun(cmd: string[], on_stdout: fun(error: string?, data: string?)|nil, on_exit: fun(obj: vim.SystemCompleted))
 ---@field run_dap? fun(config: dap.Configuration)
+---@field read_file? async fun(path: string): string?
+---@field write_file? async fun(path: string, contents: string, mode: string?)
 
 local M = {
   ---@type UtilOpts
@@ -133,6 +135,13 @@ function M.format_destination(destination)
   return table.concat(parts, " ")
 end
 
+local function quote_if_needed(str)
+  if str:match("%s") then -- Check if the string contains whitespace
+    return '"' .. str .. '"'
+  end
+  return str
+end
+
 ---Format a destination for use in a build command
 ---@param destination Destination
 function M.format_destination_for_build(destination)
@@ -141,7 +150,7 @@ function M.format_destination_for_build(destination)
   for _, k in ipairs(keys) do
     local v = destination[k]
     if v ~= nil then
-      table.insert(parts, k .. "=" .. v)
+      table.insert(parts, k .. "=" .. quote_if_needed(v))
     end
   end
   return table.concat(parts, ",")
@@ -161,6 +170,30 @@ end
 ---@param opts? UtilOpts
 function M.setup(opts)
   M.options = opts or {}
+end
+
+---Read a file
+---@async
+---@param path string
+---@return string?
+function M.read_file(path)
+  if M.options.read_file ~= nil and type(M.options.read_file) == "function" then
+    return M.options.read_file(path)
+  end
+  local file = nio.file.open(path, "r")
+
+  local contents
+  if file then
+    contents = file.read(nil, 0)
+    file.close()
+  end
+  return contents
+end
+
+---Gets the current working directory
+---@return string The current working directory
+function M.get_cwd()
+  return vim.fn.getcwd()
 end
 
 return M

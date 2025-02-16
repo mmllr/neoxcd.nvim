@@ -121,6 +121,7 @@ M.ProjectConstants = {
 ---@field schemes string[]
 ---@field quickfixes? QuickfixEntry[]
 ---@field build_settings? table<string, string>
+---@field tests TestEnumeration[]
 
 ---A class representing a build target
 ---@class Target
@@ -129,5 +130,15 @@ M.ProjectConstants = {
 ---@field plist string
 ---@field module_name string
 ---@field app_path string
+
+---A Test TestEnumerationType
+---@alias TestEnumerationKind "plan" | "target" | "class" | "test"
+
+---A class representing a test case
+---@class TestEnumeration
+---@field children TestEnumeration[]
+---@field disabled boolean
+---@field kind TestEnumerationKind
+---@field name string
 
 return M

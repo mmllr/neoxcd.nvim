@@ -116,6 +116,20 @@ local function open_in_xcode()
   end
 end
 
+---A plugin for running xcode projects
+---@class Neoxcd
+---@field setup fun(options: table)
+---@field clean fun()
+---@field build fun()
+---@field select_schemes fun()
+---@field select_destination fun()
+---@field run fun()
+---@field open_in_xcode fun()
+---@field debug fun()
+---@field stop fun()
+---@dield scan fun()
+
+---@type Neoxcd
 return {
   setup = function(options)
     project.load()
@@ -152,5 +166,16 @@ return {
       vim.notify("Failed to stop running target, result: " .. result, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     end
     spinner.stop()
+  end),
+  scan = nio.create(function()
+    spinner.start("Scanning for tests..")
+    local result = project.discover_tests()
+    nio.scheduler()
+    spinner.stop()
+    if result ~= 0 then
+      vim.notify("Failed to scan for projects " .. result, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+      return
+    end
+    project.show_runner()
   end),
 }
