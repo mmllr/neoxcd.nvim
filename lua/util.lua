@@ -24,7 +24,7 @@ end
 
 ---Helper for executing external commands
 ---@param cmd string[]
----@param on_stdout fun(error: string?, data: string?)|nil
+---@param on_stdout fun(err: string?, data: string?)|nil
 ---@param on_exit fun(obj: vim.SystemCompleted)
 function M.run_job(cmd, on_stdout, on_exit)
   if M.options.run_cmd ~= nil and type(M.options.run_cmd) == "function" then
