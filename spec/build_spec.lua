@@ -31,7 +31,7 @@ describe("Build logic", function()
   ---@param scheme string
   local function givenProject(scheme)
     project.current_project = {
-      path = "",
+      path = "/path/project.xcodeproj",
       type = "project",
       schemes = { scheme },
       scheme = scheme,
@@ -41,6 +41,7 @@ describe("Build logic", function()
         id = "id",
         name = "name",
       },
+      tests = {},
     }
   end
 
@@ -121,6 +122,8 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "Debug",
       "-showBuildSettings",
       "-json",
+      "-project",
+      "/path/project.xcodeproj",
     }, json)
     stub_external_cmd(0, {
       "xcodebuild",
@@ -131,6 +134,8 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "platform=iOS,id=id",
       "-configuration",
       "Debug",
+      "-project",
+      "/Users/user/MyProject/MyProject.xcodeproj",
     }, logs, true)
 
     ---@type QuickfixEntry[]
@@ -214,6 +219,8 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "Debug",
       "-showBuildSettings",
       "-json",
+      "-project",
+      "/path/project.xcodeproj",
     }, json)
 
     assert.are.same(0, sut.load_build_settings())
@@ -233,7 +240,11 @@ note: Run script build phase 'Build number from git' will be run during every bu
     givenProject("scheme")
     project.current_project.build_settings = {}
     project.current_project.quickfixes = {}
-    stub_external_cmd(0, { "xcodebuild", "clean", "-scheme", "scheme", "-destination", "platform=iOS,id=id" }, "")
+    stub_external_cmd(
+      0,
+      { "xcodebuild", "clean", "-scheme", "scheme", "-destination", "platform=iOS,id=id", "-project", "/path/project.xcodeproj" },
+      ""
+    )
     assert.are.same(0, sut.clean())
     assert.is_nil(project.current_project.quickfixes)
     assert.is_nil(project.current_project.build_settings)

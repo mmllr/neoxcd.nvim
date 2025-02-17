@@ -37,8 +37,7 @@ end
 ---@return QuickfixEntry|nil
 local function parse_error_message(error_message)
   local rex = require("rex_posix")
-  local filename, line, column, type, message =
-    rex.match(error_message, "^(.+):([0-9]+):([0-9]+): (error|warning): (.+)$")
+  local filename, line, column, type, message = rex.match(error_message, "^(.+):([0-9]+):([0-9]+): (error|warning): (.+)$")
   if filename and line and column and type and message then
     local lnum = tonumber(line)
     local col = tonumber(column)
@@ -110,6 +109,7 @@ end
 
 ---@param callback fun(code: vim.SystemCompleted)
 local function run_build(cmd, callback)
+  project.append_options_if_needed(cmd, project.current_project)
   util.run_job(cmd, function(_, data)
     if data then
       for line in data:gmatch("[^\n]+") do
@@ -195,6 +195,7 @@ function M.load_build_settings() -- TODO: this might be a local function
     "-showBuildSettings",
     "-json",
   }
+  project.append_options_if_needed(cmd, project.current_project)
   local result = nio.wrap(util.run_job, 3)(cmd)
   if result.code == 0 and result.stdout then
     project.current_project.build_settings = parse_settings(result.stdout)

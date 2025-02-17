@@ -147,7 +147,7 @@ end
 ---@param project Project
 ---@return string[]
 function M.build_options_for_project(project)
-  if project.type == "package" then
+  if project.type == "package" or #project.path == 0 then
     return {}
   end
   return { "-" .. project.type, project.path }
@@ -390,6 +390,15 @@ function M.stop()
   return result.code
 end
 
+---@param cmd string[]
+---@param project Project
+function M.append_options_if_needed(cmd, project)
+  local opts = M.build_options_for_project(project)
+  if not vim.tbl_isempty(opts) then
+    vim.list_extend(cmd, opts)
+  end
+end
+
 ---Discover tests in the current project
 ---@async
 ---@return ProjectResultCode
@@ -421,6 +430,7 @@ function M.discover_tests()
     "-disableAutomaticPackageResolution",
     "-skipPackageUpdates",
   }
+  M.append_options_if_needed(build_cmd, M.current_project)
   local result = cmd(build_cmd, nil)
 
   if result.code ~= 0 then

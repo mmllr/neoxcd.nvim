@@ -602,6 +602,8 @@ describe("neoxcd plugin", function()
           "hierarchical",
           "-disableAutomaticPackageResolution",
           "-skipPackageUpdates",
+          "-project",
+          "project.xcodeproj",
         }, "")
 
         assert.are.same(0, project.discover_tests())
