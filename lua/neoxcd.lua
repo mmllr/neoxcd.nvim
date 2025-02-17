@@ -99,7 +99,7 @@ local function build()
       vim.fn.setqflist(project.current_project.quickfixes, "r")
     end
   else
-    vim.notify("Build failed", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    vim.notify("Build failed with code: " .. code, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
   end
 end
 
