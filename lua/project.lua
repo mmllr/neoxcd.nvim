@@ -419,7 +419,7 @@ function M.discover_tests()
     "-scheme",
     M.current_project.scheme,
     "-destination",
-    util.format_destination_for_build(M.current_project.destination),
+    "id=" .. M.current_project.destination.id,
     "-enumerate-tests",
     "-test-enumeration-format",
     "json",

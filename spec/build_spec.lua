@@ -38,7 +38,7 @@ describe("Build logic", function()
       destinations = {},
       destination = {
         platform = types.Platform.IOS_DEVICE,
-        id = "id",
+        id = "deadbeef",
         name = "name",
       },
       tests = {},
@@ -116,14 +116,8 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "build",
       "-scheme",
       "scheme",
-      "-destination",
-      "platform=iOS,id=id",
-      "-configuration",
-      "Debug",
       "-showBuildSettings",
       "-json",
-      "-project",
-      "/path/project.xcodeproj",
     }, json)
     stub_external_cmd(0, {
       "xcodebuild",
@@ -131,7 +125,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "-scheme",
       "scheme",
       "-destination",
-      "platform=iOS,id=id",
+      "id=deadbeef",
       "-configuration",
       "Debug",
       "-project",
@@ -213,14 +207,8 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "build",
       "-scheme",
       "scheme",
-      "-destination",
-      "platform=iOS,id=id",
-      "-configuration",
-      "Debug",
       "-showBuildSettings",
       "-json",
-      "-project",
-      "/path/project.xcodeproj",
     }, json)
 
     assert.are.same(0, sut.load_build_settings())
@@ -242,7 +230,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
     project.current_project.quickfixes = {}
     stub_external_cmd(
       0,
-      { "xcodebuild", "clean", "-scheme", "scheme", "-destination", "platform=iOS,id=id", "-project", "/path/project.xcodeproj" },
+      { "xcodebuild", "clean", "-scheme", "scheme", "-destination", "id=deadbeef", "-project", "/path/project.xcodeproj" },
       ""
     )
     assert.are.same(0, sut.clean())

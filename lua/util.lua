@@ -29,6 +29,7 @@ end
 ---@param on_stdout fun(err: string?, data: string?)|nil
 ---@param on_exit fun(obj: vim.SystemCompleted)
 function M.run_job(cmd, on_stdout, on_exit)
+  -- print("Running command: " .. table.concat(cmd, " "))
   if M.options.run_cmd ~= nil and type(M.options.run_cmd) == "function" then
     M.options.run_cmd(cmd, on_stdout, on_exit)
     return
@@ -140,20 +141,6 @@ local function quote_if_needed(str)
     return '"' .. str .. '"'
   end
   return str
-end
-
----Format a destination for use in a build command
----@param destination Destination
-function M.format_destination_for_build(destination)
-  local keys = { "platform", "arch", "id" }
-  local parts = {}
-  for _, k in ipairs(keys) do
-    local v = destination[k]
-    if v ~= nil then
-      table.insert(parts, k .. "=" .. quote_if_needed(v))
-    end
-  end
-  return table.concat(parts, ",")
 end
 
 ---Remove n components from the end of a path

@@ -139,7 +139,7 @@ function M.build()
     "-scheme",
     project.current_project.scheme,
     "-destination",
-    util.format_destination_for_build(project.current_project.destination),
+    "id=" .. project.current_project.destination.id,
     "-configuration",
     "Debug",
   }
@@ -148,8 +148,7 @@ function M.build()
 end
 
 ---Builds the target
----@async
----@return number
+---@async @return number
 function M.clean()
   if not project.current_project.scheme then
     return -1
@@ -163,7 +162,7 @@ function M.clean()
     "-scheme",
     project.current_project.scheme,
     "-destination",
-    util.format_destination_for_build(project.current_project.destination),
+    "id=" .. project.current_project.destination.id,
   }
   local result = nio.wrap(run_build, 2)(cmd)
   if result.code == 0 then
@@ -188,14 +187,9 @@ function M.load_build_settings() -- TODO: this might be a local function
     "build",
     "-scheme",
     project.current_project.scheme,
-    "-destination",
-    util.format_destination_for_build(project.current_project.destination),
-    "-configuration",
-    "Debug",
     "-showBuildSettings",
     "-json",
   }
-  project.append_options_if_needed(cmd, project.current_project)
   local result = nio.wrap(util.run_job, 3)(cmd)
   if result.code == 0 and result.stdout then
     project.current_project.build_settings = parse_settings(result.stdout)

@@ -362,6 +362,7 @@ describe("neoxcd plugin", function()
       type = "project",
       scheme = "testScheme",
       schemes = { "testScheme" },
+      tests = {},
     }
     project.load_destinations()
     project.select_scheme("testScheme")
@@ -592,7 +593,7 @@ describe("neoxcd plugin", function()
           "-scheme",
           "testScheme",
           "-destination",
-          'platform="iOS Simulator",id=deadbeef-deadbeefdeadbeef',
+          "id=deadbeef-deadbeefdeadbeef",
           "-enumerate-tests",
           "-test-enumeration-format",
           "json",
