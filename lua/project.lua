@@ -112,19 +112,19 @@ function M.load()
 
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcworkspace") then
-      M.current_project = { path = file, type = "workspace", schemes = {}, destinations = {} }
+      M.current_project = { path = file, type = "workspace", schemes = {}, destinations = {}, tests = {} }
       return
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcodeproj") then
-      M.current_project = { path = file, type = "project", schemes = {}, destinations = {} }
+      M.current_project = { path = file, type = "project", schemes = {}, destinations = {}, tests = {} }
       return
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "Package.swift") then
-      M.current_project = { path = file, type = "package", schemes = {}, destinations = {} }
+      M.current_project = { path = file, type = "package", schemes = {}, destinations = {}, tests = {} }
       return
     end
   end
@@ -378,12 +378,12 @@ function M.stop()
   return result.code
 end
 
----@param cmd string[]
+---@param command string[]
 ---@param project Project
-function M.append_options_if_needed(cmd, project)
+function M.append_options_if_needed(command, project)
   local opts = M.build_options_for_project(project)
   if not vim.tbl_isempty(opts) then
-    vim.list_extend(cmd, opts)
+    vim.list_extend(command, opts)
   end
 end
 
