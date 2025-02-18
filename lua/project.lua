@@ -98,18 +98,6 @@ local function parse_destinations(text)
   return result
 end
 
----@return ProjectResultCode
-local function ensure_valid()
-  if M.current_project == nil then
-    return M.ProjectResult.NO_PROJECT
-  elseif M.current_target == nil then
-    return M.ProjectResult.NO_TARGET
-  elseif M.current_project.destination == nil then
-    return M.ProjectResult.NO_DESTINATION
-  end
-  return M.ProjectResult.OK
-end
-
 ---@type Project|nil
 M.current_project = nil
 
