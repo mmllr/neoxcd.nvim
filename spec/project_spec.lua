@@ -1,3 +1,4 @@
+---@diagnostic disable: duplicate-set-field
 local assert = require("luassert")
 local types = require("types")
 local util = require("util")
@@ -644,6 +645,48 @@ describe("neoxcd plugin", function()
           disabled = false,
         },
       }, project.current_project.tests)
+    end)
+
+    describe("Project setup", function()
+      it("Loads a project", function()
+        util.get_cwd = function()
+          return "/path/cwd/"
+        end
+        util.list_files = function(path)
+          assert.are.same("/path/cwd/", path)
+          return { "Package.swift", "project.xcodeproj" }
+        end
+        assert.are.same(0, project.load())
+        assert.are.same(
+          { path = "project.xcodeproj", type = "project", schemes = {}, destinations = {}, tests = {} },
+          project.current_project
+        )
+      end)
+
+      it("Loads a workspace", function()
+        util.get_cwd = function()
+          return "/path/cwd/"
+        end
+        util.list_files = function()
+          return { "Package.swift", "project.xcodeproj", "project.xcworkspace" }
+        end
+        assert.are.same(0, project.load())
+        assert.are.same(
+          { path = "project.xcworkspace", type = "workspace", schemes = {}, destinations = {}, tests = {} },
+          project.current_project
+        )
+      end)
+
+      it("Loads a package", function()
+        util.get_cwd = function()
+          return "/path/cwd/"
+        end
+        util.list_files = function()
+          return { "Package.swift" }
+        end
+        assert.are.same(0, project.load())
+        assert.are.same({ path = "Package.swift", type = "package", schemes = {}, destinations = {}, tests = {} }, project.current_project)
+      end)
     end)
   end)
 end)

@@ -105,30 +105,30 @@ M.current_project = nil
 M.current_target = nil
 
 ---Loads the project file in the current directory
+---@return ProjectResultCode
 function M.load()
-  local files = vim.fs.find(function(name, path)
-    return vim.endswith(name, ".xcworkspace") or vim.endswith(name, ".xcodeproj") or vim.endswith(name, "Package.swift")
-  end, { limit = 1 })
+  local files = util.list_files(util.get_cwd())
 
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcworkspace") then
       M.current_project = { path = file, type = "workspace", schemes = {}, destinations = {}, tests = {} }
-      return
+      return M.ProjectResult.OK
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "xcodeproj") then
       M.current_project = { path = file, type = "project", schemes = {}, destinations = {}, tests = {} }
-      return
+      return M.ProjectResult.OK
     end
   end
   for _, file in ipairs(files) do
     if vim.endswith(file, "Package.swift") then
       M.current_project = { path = file, type = "package", schemes = {}, destinations = {}, tests = {} }
-      return
+      return M.ProjectResult.OK
     end
   end
   M.current_project = nil
+  return M.ProjectResult.NO_PROJECT
 end
 
 ---Returns the builld options for a project

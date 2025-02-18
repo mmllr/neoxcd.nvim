@@ -183,4 +183,22 @@ function M.get_cwd()
   return vim.fn.getcwd()
 end
 
+---List the files in a directory
+---@param directory string The directory to list the files in
+---@return string[] The list of files
+function M.list_files(directory)
+  local files = {}
+  local handle = vim.uv.fs_scandir(directory)
+  if handle then
+    while true do
+      local name, type = vim.uv.fs_scandir_next(handle)
+      if not name then
+        break
+      end
+      table.insert(files, name)
+    end
+  end
+  return files
+end
+
 return M
