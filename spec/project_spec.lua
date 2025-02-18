@@ -529,10 +529,11 @@ describe("neoxcd plugin", function()
         },
       }, stubbed_dap)
     end)
+  end)
 
-    describe("Testing", function()
-      it("Discovers tests", function()
-        local json = [[
+  describe("Testing", function()
+    it("Discovers tests", function()
+      local json = [[
 {
   "errors" : [
   ],
@@ -574,76 +575,75 @@ describe("neoxcd plugin", function()
 }
         ]]
 
-        ---@type Destination
-        local sim = {
-          platform = types.Platform.IOS_SIMULATOR,
-          id = "deadbeef-deadbeefdeadbeef",
-          name = "iPhone 16 Pro",
-        }
-        givenProject("project", "testScheme", {}, sim)
-        ---@diagnostic disable-next-line: duplicate-set-field
-        util.get_cwd = function()
-          return "/cwd"
-        end
-        files["/cwd/.neoxcd/tests.json"] = json
-        stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/tests.json" }, "")
-        stub_external_cmd(0, {
-          "xcodebuild",
-          "test-without-building",
-          "-scheme",
-          "testScheme",
-          "-destination",
-          "id=deadbeef-deadbeefdeadbeef",
-          "-enumerate-tests",
-          "-test-enumeration-format",
-          "json",
-          "-test-enumeration-output-path",
-          "/cwd/.neoxcd/tests.json",
-          "-test-enumeration-style",
-          "hierarchical",
-          "-disableAutomaticPackageResolution",
-          "-skipPackageUpdates",
-          "-project",
-          "project.xcodeproj",
-        }, "")
+      ---@type Destination
+      local sim = {
+        platform = types.Platform.IOS_SIMULATOR,
+        id = "deadbeef-deadbeefdeadbeef",
+        name = "iPhone 16 Pro",
+      }
+      givenProject("project", "testScheme", {}, sim)
+      ---@diagnostic disable-next-line: duplicate-set-field
+      util.get_cwd = function()
+        return "/cwd"
+      end
+      files["/cwd/.neoxcd/tests.json"] = json
+      stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/tests.json" }, "")
+      stub_external_cmd(0, {
+        "xcodebuild",
+        "test-without-building",
+        "-scheme",
+        "testScheme",
+        "-destination",
+        "id=deadbeef-deadbeefdeadbeef",
+        "-enumerate-tests",
+        "-test-enumeration-format",
+        "json",
+        "-test-enumeration-output-path",
+        "/cwd/.neoxcd/tests.json",
+        "-test-enumeration-style",
+        "hierarchical",
+        "-disableAutomaticPackageResolution",
+        "-skipPackageUpdates",
+        "-project",
+        "project.xcodeproj",
+      }, "")
 
-        assert.are.same(0, project.discover_tests())
-        assert.are.same({
-          {
-            children = {
-              {
-                name = "Target",
-                kind = "target",
-                disabled = false,
-                children = {
-                  {
-                    name = "TestClassName",
-                    kind = "class",
-                    disabled = false,
-                    children = {
-                      {
-                        name = "testA",
-                        kind = "test",
-                        disabled = false,
-                        children = {},
-                      },
-                      {
-                        name = "testB",
-                        kind = "test",
-                        disabled = false,
-                        children = {},
-                      },
+      assert.are.same(0, project.discover_tests())
+      assert.are.same({
+        {
+          children = {
+            {
+              name = "Target",
+              kind = "target",
+              disabled = false,
+              children = {
+                {
+                  name = "TestClassName",
+                  kind = "class",
+                  disabled = false,
+                  children = {
+                    {
+                      name = "testA",
+                      kind = "test",
+                      disabled = false,
+                      children = {},
+                    },
+                    {
+                      name = "testB",
+                      kind = "test",
+                      disabled = false,
+                      children = {},
                     },
                   },
                 },
               },
             },
-            name = "PlanName",
-            kind = "plan",
-            disabled = false,
           },
-        }, project.current_project.tests)
-      end)
+          name = "PlanName",
+          kind = "plan",
+          disabled = false,
+        },
+      }, project.current_project.tests)
     end)
   end)
 end)
