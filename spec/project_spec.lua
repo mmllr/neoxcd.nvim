@@ -685,6 +685,43 @@ describe("neoxcd plugin", function()
         assert.are.same(0, project.load())
         assert.are.same({ path = "Package.swift", type = "package", schemes = {}, destinations = {}, tests = {} }, project.current_project)
       end)
+
+      it("Loads a saved project", function()
+        project.current_project = nil
+        files["/path/cwd/.neoxcd/project.json"] = [[
+        {
+          "name": "Project",
+          "scheme": "Scheme",
+          "type": "project",
+          "path": "/the/path/to/the/project.xcodeproj",
+          "destination": {
+            "platform": "iOS Simulator",
+            "id": "deadbeef-deadbeefdeadbeef",
+            "name": "iPhone 16 Pro"
+          },
+          "schemes": [
+            "SchemeA",
+            "SchemeB",
+            "SchemeC"
+          ]
+        }
+        ]]
+
+        assert.are.same(0, project.load())
+        assert.are.same({
+          name = "Project",
+          path = "/the/path/to/the/project.xcodeproj",
+          type = "project",
+          scheme = "Scheme",
+          destination = {
+            platform = "iOS Simulator",
+            id = "deadbeef-deadbeefdeadbeef",
+            name = "iPhone 16 Pro",
+          },
+          schemes = { "SchemeA", "SchemeB", "SchemeC" },
+          tests = {},
+        }, project.current_project)
+      end)
     end)
   end)
 end)

@@ -136,6 +136,30 @@ M.current_project = nil
 ---@type Target|nil
 M.current_target = nil
 
+---Loads the current project from saved json
+---@async
+---@return ProjectResultCode
+local function load_project()
+  local data = util.read_file(util.get_cwd() .. ".neoxcd/project.json")
+  if data == nil then
+    return M.ProjectResult.OK
+  end
+  local decoded = vim.json.decode(data)
+  if decoded ~= nil and decoded.name and decoded.type and decoded.path and decoded.destination and decoded.schemes then
+    M.current_project = {
+      name = decoded.name,
+      path = decoded.path,
+      type = decoded.type,
+      scheme = decoded.scheme,
+      destination = decoded.destination,
+      schemes = decoded.schemes,
+      tests = {},
+    }
+    return M.ProjectResult.OK
+  end
+  return M.ProjectResult.INVALID_JSON
+end
+
 ---Loads the project file in the current directory
 ---@return ProjectResultCode
 function M.load()
@@ -145,7 +169,8 @@ function M.load()
   end
 
   cmd({ "mkdir", "-p", util.get_cwd() .. ".neoxcd" }, nil)
-  return result
+
+  return load_project()
 end
 
 ---Returns the builld options for a project
