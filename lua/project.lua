@@ -109,23 +109,28 @@ M.current_target = nil
 function M.load()
   local files = util.list_files(util.get_cwd())
 
-  for _, file in ipairs(files) do
-    if vim.endswith(file, "xcworkspace") then
-      M.current_project = { path = file, type = "workspace", schemes = {}, destinations = {}, tests = {} }
-      return M.ProjectResult.OK
+  local function has_suffix(suffix)
+    return function(file)
+      return vim.endswith(file, suffix)
     end
   end
-  for _, file in ipairs(files) do
-    if vim.endswith(file, "xcodeproj") then
-      M.current_project = { path = file, type = "project", schemes = {}, destinations = {}, tests = {} }
-      return M.ProjectResult.OK
-    end
+
+  local file = util.find_first(files, has_suffix(".xcworkspace"))
+  if file ~= nil then
+    M.current_project = { path = file, type = "workspace", schemes = {}, destinations = {}, tests = {} }
+    return M.ProjectResult.OK
   end
-  for _, file in ipairs(files) do
-    if vim.endswith(file, "Package.swift") then
-      M.current_project = { path = file, type = "package", schemes = {}, destinations = {}, tests = {} }
-      return M.ProjectResult.OK
-    end
+
+  file = util.find_first(files, has_suffix(".xcodeproj"))
+  if file ~= nil then
+    M.current_project = { path = file, type = "project", schemes = {}, destinations = {}, tests = {} }
+    return M.ProjectResult.OK
+  end
+
+  file = util.find_first(files, has_suffix("Package.swift"))
+  if file ~= nil then
+    M.current_project = { path = file, type = "package", schemes = {}, destinations = {}, tests = {} }
+    return M.ProjectResult.OK
   end
   M.current_project = nil
   return M.ProjectResult.NO_PROJECT

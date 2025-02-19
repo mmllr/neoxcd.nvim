@@ -201,4 +201,30 @@ function M.list_files(directory)
   return files
 end
 
+---Check if a list contains a value
+---@param list any[]
+---@param predicate fun(value: any): boolean
+---@return boolean
+function M.list_contains(list, predicate)
+  for _, v in ipairs(list) do
+    if predicate(v) then
+      return true
+    end
+  end
+  return false
+end
+
+---Finds the first value in a list that matches a predicate
+---@param list any[]
+---@param predicate fun(value: any): boolean
+---return any|nil
+function M.find_first(list, predicate)
+  for _, v in ipairs(list) do
+    if predicate(v) then
+      return v
+    end
+  end
+  return nil
+end
+
 return M
