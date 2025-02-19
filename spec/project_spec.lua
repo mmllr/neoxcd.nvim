@@ -648,10 +648,14 @@ describe("neoxcd plugin", function()
     end)
 
     describe("Project setup", function()
-      it("Loads a project", function()
+      before_each(function()
         util.get_cwd = function()
           return "/path/cwd/"
         end
+        stub_external_cmd(0, { "mkdir", "-p", "/path/cwd/.neoxcd" }, "")
+      end)
+
+      it("Loads a project", function()
         util.list_files = function(path)
           assert.are.same("/path/cwd/", path)
           return { "Package.swift", "project.xcodeproj" }
@@ -664,9 +668,6 @@ describe("neoxcd plugin", function()
       end)
 
       it("Loads a workspace", function()
-        util.get_cwd = function()
-          return "/path/cwd/"
-        end
         util.list_files = function()
           return { "Package.swift", "project.xcodeproj", "project.xcworkspace" }
         end
@@ -678,9 +679,6 @@ describe("neoxcd plugin", function()
       end)
 
       it("Loads a package", function()
-        util.get_cwd = function()
-          return "/path/cwd/"
-        end
         util.list_files = function()
           return { "Package.swift" }
         end

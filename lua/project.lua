@@ -98,15 +98,9 @@ local function parse_destinations(text)
   return result
 end
 
----@type Project|nil
-M.current_project = nil
-
----@type Target|nil
-M.current_target = nil
-
----Loads the project file in the current directory
+---Detects the project type
 ---@return ProjectResultCode
-function M.load()
+local function detect_project()
   local files = util.list_files(util.get_cwd())
 
   local function has_suffix(suffix)
@@ -134,6 +128,24 @@ function M.load()
   end
   M.current_project = nil
   return M.ProjectResult.NO_PROJECT
+end
+
+---@type Project|nil
+M.current_project = nil
+
+---@type Target|nil
+M.current_target = nil
+
+---Loads the project file in the current directory
+---@return ProjectResultCode
+function M.load()
+  local result = detect_project()
+  if result ~= M.ProjectResult.OK then
+    return result
+  end
+
+  cmd({ "mkdir", "-p", util.get_cwd() .. ".neoxcd" }, nil)
+  return result
 end
 
 ---Returns the builld options for a project
