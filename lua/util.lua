@@ -4,7 +4,7 @@ local nio = require("nio")
 ---@field run_cmd? fun(cmd: string[], on_stdout: fun(error: string?, data: string?)|nil, on_exit: fun(obj: vim.SystemCompleted))
 ---@field run_dap? fun(config: dap.Configuration)
 ---@field read_file? async fun(path: string): string?
----@field write_file? async fun(path: string, contents: string, mode: string?)
+---@field write_file? async fun(path: string, contents: string): boolean
 
 local M = {
   ---@type UtilOpts
@@ -175,6 +175,24 @@ function M.read_file(path)
     file.close()
   end
   return contents
+end
+
+---Writes a file
+---@async
+---@param path string
+---@param content string
+---@return boolean
+function M.write_file(path, content)
+  if M.options.write_file ~= nil and type(M.options.write_file) == "function" then
+    return M.options.write_file(path, content)
+  end
+  local file = nio.file.open(path, "w+")
+  if file then
+    file.write(content)
+    file.close()
+    return true
+  end
+  return false
 end
 
 ---Gets the current working directory

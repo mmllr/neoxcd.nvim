@@ -11,6 +11,7 @@ describe("neoxcd plugin", function()
   ---@type table<string, StubbedCommand>
   local stubbed_commands = {}
   local files = {}
+  local written_files = {}
 
   ---@param type ProjectType
   ---@param scheme string|nil
@@ -48,9 +49,13 @@ describe("neoxcd plugin", function()
     util.setup({
       run_cmd = helpers.setup_run_cmd(stubbed_commands),
       read_file = helpers.stub_file_read(files),
+      write_file = helpers.stub_file_write(written_files),
     })
     project.current_project = nil
     project.current_target = nil
+    util.get_cwd = function()
+      return "/path/cwd"
+    end
   end)
 
   after_each(function()
@@ -113,7 +118,11 @@ describe("neoxcd plugin", function()
       }
 
       assert.are.same(project.ProjectResult.SUCCESS, project.load_schemes())
-
+      assert.are.same({
+        type = "workspace",
+        path = "project.xcworkspace",
+        schemes = expected,
+      }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
       assert.are.same(expected, project.current_project.schemes)
     end)
 
@@ -147,6 +156,11 @@ describe("neoxcd plugin", function()
       assert.are.same(0, project.load_schemes())
 
       assert.are.same(expected, project.current_project.schemes)
+      assert.are.same({
+        type = "project",
+        path = "project.xcodeproj",
+        schemes = expected,
+      }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
     end)
 
     it("Selecting a scheme will update the xcode build server", function()
@@ -650,7 +664,7 @@ describe("neoxcd plugin", function()
     describe("Project setup", function()
       it("wit not create an .neoxcd folder for project not containing no Xcode project", function()
         util.get_cwd = function()
-          return "/path/cwd/"
+          return "/path/cwd"
         end
         util.list_files = function()
           return { "AFile.swift", "hello.rs", "file.c" }
@@ -662,14 +676,14 @@ describe("neoxcd plugin", function()
       describe("Folders containg a Xcode project", function()
         before_each(function()
           util.get_cwd = function()
-            return "/path/cwd/"
+            return "/path/cwd"
           end
           stub_external_cmd(0, { "mkdir", "-p", "/path/cwd/.neoxcd" }, "")
         end)
 
         it("Loads a project", function()
           util.list_files = function(path)
-            assert.are.same("/path/cwd/", path)
+            assert.are.same("/path/cwd", path)
             return { "Package.swift", "project.xcodeproj" }
           end
           assert.are.same(project.ProjectResult.SUCCESS, project.load())

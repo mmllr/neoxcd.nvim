@@ -46,4 +46,14 @@ return {
       return files[path]
     end
   end,
+
+  ---Stubs file writes
+  ---@param files table<string, string>
+  ---@return async fun(path: string, content: string): boolean
+  stub_file_write = function(files)
+    return function(path, content)
+      files[path] = content
+      return true
+    end
+  end,
 }

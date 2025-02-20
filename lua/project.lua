@@ -141,7 +141,7 @@ M.current_target = nil
 ---@return ProjectResultCode
 local function load_project()
   nio.scheduler()
-  local path = util.get_cwd() .. ".neoxcd/project.json"
+  local path = util.get_cwd() .. "/.neoxcd/project.json"
   local data = util.read_file(path)
   if data == nil then
     return M.ProjectResult.SUCCESS
@@ -162,6 +162,31 @@ local function load_project()
   return M.ProjectResult.INVALID_JSON
 end
 
+---Saves the current project to a json file
+---@async
+---@return ProjectResultCode
+local function save_project()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  end
+  local data = {
+    name = M.current_project.name,
+    path = M.current_project.path,
+    type = M.current_project.type,
+    scheme = M.current_project.scheme,
+    destination = M.current_project.destination,
+    schemes = M.current_project.schemes,
+  }
+  nio.scheduler()
+  local path = util.get_cwd() .. "/.neoxcd/project.json"
+  local result = util.write_file(path, vim.json.encode(data))
+  if result then
+    return M.ProjectResult.SUCCESS
+  else
+    return M.ProjectResult.INVALID_JSON
+  end
+end
+
 ---Loads the project file in the current directory
 ---@async
 ---@return ProjectResultCode
@@ -171,7 +196,7 @@ function M.load()
     return result
   end
 
-  cmd({ "mkdir", "-p", util.get_cwd() .. ".neoxcd" }, nil)
+  cmd({ "mkdir", "-p", util.get_cwd() .. "/.neoxcd" }, nil)
 
   return load_project()
 end
@@ -208,6 +233,7 @@ function M.load_schemes()
   local result = nio.wrap(util.run_job, 3)(util.concat({ "xcodebuild", "-list", "-json" }, opts), nil)
   if result.code == 0 and result.stdout ~= nil then
     M.current_project.schemes = parse_schemes(result.stdout)
+    save_project()
   end
   return result.code
 end
