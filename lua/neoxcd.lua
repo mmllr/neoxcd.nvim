@@ -132,7 +132,9 @@ end
 ---@type Neoxcd
 return {
   setup = function(options)
-    project.load()
+    nio.run(function()
+      project.load()
+    end)
   end,
   clean = nio.create(clean),
   build = nio.create(build),

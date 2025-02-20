@@ -140,7 +140,9 @@ M.current_target = nil
 ---@async
 ---@return ProjectResultCode
 local function load_project()
-  local data = util.read_file(util.get_cwd() .. ".neoxcd/project.json")
+  nio.scheduler()
+  local path = util.get_cwd() .. ".neoxcd/project.json"
+  local data = util.read_file(path)
   if data == nil then
     return M.ProjectResult.OK
   end
@@ -161,6 +163,7 @@ local function load_project()
 end
 
 ---Loads the project file in the current directory
+---@async
 ---@return ProjectResultCode
 function M.load()
   local result = detect_project()
