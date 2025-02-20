@@ -112,7 +112,7 @@ describe("neoxcd plugin", function()
         "VoiceMemos",
       }
 
-      project.load_schemes()
+      assert.are.same(project.ProjectResult.SUCCESS, project.load_schemes())
 
       assert.are.same(expected, project.current_project.schemes)
     end)
@@ -153,7 +153,7 @@ describe("neoxcd plugin", function()
       givenProject("project", nil, { "schemeA", "SchemeB", "schemeC" })
       stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" }, "")
 
-      assert.are.same(0, project.select_scheme("schemeB"))
+      assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
       assert.are.same("schemeB", project.current_project.scheme)
     end)
 
@@ -161,7 +161,7 @@ describe("neoxcd plugin", function()
       givenProject("project", "schemeA", { "schemeA", "SchemeB", "schemeC" })
       local result = project.select_scheme("schemeA")
 
-      assert.are.same(0, result)
+      assert.are.same(project.ProjectResult.SUCCESS, result)
       assert.are.same("schemeA", project.current_project.scheme)
     end)
 
@@ -169,7 +169,7 @@ describe("neoxcd plugin", function()
       givenProject("package", nil, { "schemeA", "SchemeB", "schemeC" })
       local result = project.select_scheme("schemeA")
 
-      assert.are.same(0, result)
+      assert.are.same(project.ProjectResult.SUCCESS, result)
       assert.are.same("schemeA", project.current_project.scheme)
     end)
   end)
@@ -281,7 +281,7 @@ describe("neoxcd plugin", function()
           platform = "iOS Simulator",
         },
       }
-      assert.are.same(0, project.load_destinations())
+      assert.are.same(project.ProjectResult.SUCCESS, project.load_destinations())
       assert.are.same(expected, project.destinations())
     end)
   end)
@@ -378,7 +378,7 @@ describe("neoxcd plugin", function()
     givenProject("project", "testScheme")
     stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer")
     stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app", "project.xcodeproj" }, "")
-    assert.are.same(0, project.open_in_xcode())
+    assert.are.same(project.ProjectResult.SUCCESS, project.open_in_xcode())
   end)
 
   it("Running a target on simulator with no simulator booted", function()
@@ -404,7 +404,7 @@ describe("neoxcd plugin", function()
       "com.test.TestApp",
     }, "")
 
-    assert.are.same(0, project.run())
+    assert.are.same(project.ProjectResult.SUCCESS, project.run())
   end)
 
   it("Running a target on macOS", function()
@@ -418,7 +418,7 @@ describe("neoxcd plugin", function()
     givenProject("project", "testScheme", {}, mac_dest)
     givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
     stub_external_cmd(0, { "open", "/path/to/build/TestApp.app" }, "")
-    assert.are.same(0, project.run())
+    assert.are.same(project.ProjectResult.SUCCESS, project.run())
   end)
 
   it("Stopping a running macOS app", function()
@@ -434,7 +434,7 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "pgrep", "AppName" }, "42")
     stub_external_cmd(0, { "kill", "-9", "42" }, "")
 
-    assert.are.same(0, project.stop())
+    assert.are.same(project.ProjectResult.SUCCESS, project.stop())
   end)
 
   it("Stopping a running simulator app", function()
@@ -449,7 +449,7 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "pgrep", "AppName" }, "42\n\n")
     stub_external_cmd(0, { "kill", "-9", "42" }, "")
 
-    assert.are.same(0, project.stop())
+    assert.are.same(project.ProjectResult.SUCCESS, project.stop())
   end)
 
   describe("Debugging", function()
@@ -477,7 +477,7 @@ describe("neoxcd plugin", function()
       givenProject("project", "testScheme", {}, mac_dest)
       givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
 
-      assert.are.same(0, project.debug())
+      assert.are.same(project.ProjectResult.SUCCESS, project.debug())
       assert.are.same({
         name = "macOS Debugger",
         type = "lldb",
@@ -516,7 +516,7 @@ describe("neoxcd plugin", function()
         "com.test.TestApp",
       }, "")
 
-      assert.are.same(0, project.debug())
+      assert.are.same(project.ProjectResult.SUCCESS, project.debug())
 
       assert.are.same({
         {
@@ -609,7 +609,7 @@ describe("neoxcd plugin", function()
         "project.xcodeproj",
       }, "")
 
-      assert.are.same(0, project.discover_tests())
+      assert.are.same(project.ProjectResult.SUCCESS, project.discover_tests())
       assert.are.same({
         {
           children = {
@@ -672,7 +672,7 @@ describe("neoxcd plugin", function()
             assert.are.same("/path/cwd/", path)
             return { "Package.swift", "project.xcodeproj" }
           end
-          assert.are.same(0, project.load())
+          assert.are.same(project.ProjectResult.SUCCESS, project.load())
           assert.are.same(
             { path = "project.xcodeproj", type = "project", schemes = {}, destinations = {}, tests = {} },
             project.current_project
@@ -683,7 +683,7 @@ describe("neoxcd plugin", function()
           util.list_files = function()
             return { "Package.swift", "project.xcodeproj", "project.xcworkspace" }
           end
-          assert.are.same(0, project.load())
+          assert.are.same(project.ProjectResult.SUCCESS, project.load())
           assert.are.same(
             { path = "project.xcworkspace", type = "workspace", schemes = {}, destinations = {}, tests = {} },
             project.current_project
@@ -694,7 +694,7 @@ describe("neoxcd plugin", function()
           util.list_files = function()
             return { "Package.swift" }
           end
-          assert.are.same(0, project.load())
+          assert.are.same(project.ProjectResult.SUCCESS, project.load())
           assert.are.same(
             { path = "Package.swift", type = "package", schemes = {}, destinations = {}, tests = {} },
             project.current_project
@@ -722,7 +722,7 @@ describe("neoxcd plugin", function()
         }
         ]]
 
-          assert.are.same(0, project.load())
+          assert.are.same(project.ProjectResult.SUCCESS, project.load())
           assert.are.same({
             name = "Project",
             path = "/the/path/to/the/project.xcodeproj",

@@ -9,7 +9,7 @@ local M = {}
 ---@alias ProjectResultCode integer
 
 ---@class ProjectResultConstants
----@field OK ProjectResultCode
+---@field SUCCESS ProjectResultCode
 ---@field NO_PROJECT ProjectResultCode
 ---@field NO_SCHEME ProjectResultCode
 ---@field NO_DESTINATION ProjectResultCode
@@ -23,7 +23,7 @@ local M = {}
 
 ---@type ProjectResultConstants
 M.ProjectResult = {
-  OK = 0,
+  SUCCESS = 0,
   NO_PROJECT = -1,
   NO_SCHEME = -2,
   NO_DESTINATION = -3,
@@ -112,19 +112,19 @@ local function detect_project()
   local file = util.find_first(files, has_suffix(".xcworkspace"))
   if file ~= nil then
     M.current_project = { path = file, type = "workspace", schemes = {}, destinations = {}, tests = {} }
-    return M.ProjectResult.OK
+    return M.ProjectResult.SUCCESS
   end
 
   file = util.find_first(files, has_suffix(".xcodeproj"))
   if file ~= nil then
     M.current_project = { path = file, type = "project", schemes = {}, destinations = {}, tests = {} }
-    return M.ProjectResult.OK
+    return M.ProjectResult.SUCCESS
   end
 
   file = util.find_first(files, has_suffix("Package.swift"))
   if file ~= nil then
     M.current_project = { path = file, type = "package", schemes = {}, destinations = {}, tests = {} }
-    return M.ProjectResult.OK
+    return M.ProjectResult.SUCCESS
   end
   M.current_project = nil
   return M.ProjectResult.NO_PROJECT
@@ -144,7 +144,7 @@ local function load_project()
   local path = util.get_cwd() .. ".neoxcd/project.json"
   local data = util.read_file(path)
   if data == nil then
-    return M.ProjectResult.OK
+    return M.ProjectResult.SUCCESS
   end
   local decoded = vim.json.decode(data)
   if decoded ~= nil and decoded.name and decoded.type and decoded.path and decoded.destination and decoded.schemes then
@@ -157,7 +157,7 @@ local function load_project()
       schemes = decoded.schemes,
       tests = {},
     }
-    return M.ProjectResult.OK
+    return M.ProjectResult.SUCCESS
   end
   return M.ProjectResult.INVALID_JSON
 end
@@ -167,7 +167,7 @@ end
 ---@return ProjectResultCode
 function M.load()
   local result = detect_project()
-  if result ~= M.ProjectResult.OK then
+  if result ~= M.ProjectResult.SUCCESS then
     return result
   end
 
@@ -225,11 +225,11 @@ function M.select_scheme(scheme)
   end
   if p.scheme == scheme or p.type == "package" then
     M.current_project.scheme = scheme
-    return M.ProjectResult.OK
+    return M.ProjectResult.SUCCESS
   end
   local opts = M.build_options_for_project(p)
   local result = cmd(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
-  if result.code == M.ProjectResult.OK then
+  if result.code == M.ProjectResult.SUCCESS then
     M.current_project.scheme = scheme
   end
   return result.code
@@ -249,7 +249,7 @@ function M.load_destinations()
 
   local opts = M.build_options_for_project(p)
   local result = cmd(util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts), nil)
-  if result.code == M.ProjectResult.OK and result.stdout then
+  if result.code == M.ProjectResult.SUCCESS and result.stdout then
     destinations[p.scheme] = parse_destinations(result.stdout)
   end
   return result.code
@@ -278,7 +278,7 @@ function M.open_in_xcode()
     return M.ProjectResult.NO_PROJECT
   end
   local result = cmd({ "xcode-select", "-p" }, nil)
-  if result.code ~= M.ProjectResult.OK or result.stdout == nil then
+  if result.code ~= M.ProjectResult.SUCCESS or result.stdout == nil then
     return M.ProjectResult.NO_XCODE
   end
   local xcode_path = util.remove_n_components(result.stdout, 2)
@@ -399,7 +399,7 @@ function M.debug()
     util.run_dap(macos_dap_config(M.current_target.app_path))
   end
 
-  return M.ProjectResult.OK
+  return M.ProjectResult.SUCCESS
 end
 
 ---Stops the currently running target
