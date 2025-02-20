@@ -648,47 +648,62 @@ describe("neoxcd plugin", function()
     end)
 
     describe("Project setup", function()
-      before_each(function()
+      it("wit not create an .neoxcd folder for project not containing no Xcode project", function()
         util.get_cwd = function()
           return "/path/cwd/"
         end
-        stub_external_cmd(0, { "mkdir", "-p", "/path/cwd/.neoxcd" }, "")
-      end)
-
-      it("Loads a project", function()
-        util.list_files = function(path)
-          assert.are.same("/path/cwd/", path)
-          return { "Package.swift", "project.xcodeproj" }
-        end
-        assert.are.same(0, project.load())
-        assert.are.same(
-          { path = "project.xcodeproj", type = "project", schemes = {}, destinations = {}, tests = {} },
-          project.current_project
-        )
-      end)
-
-      it("Loads a workspace", function()
         util.list_files = function()
-          return { "Package.swift", "project.xcodeproj", "project.xcworkspace" }
+          return { "AFile.swift", "hello.rs", "file.c" }
         end
-        assert.are.same(0, project.load())
-        assert.are.same(
-          { path = "project.xcworkspace", type = "workspace", schemes = {}, destinations = {}, tests = {} },
-          project.current_project
-        )
+
+        assert.are.same(project.ProjectResult.NO_PROJECT, project.load())
       end)
 
-      it("Loads a package", function()
-        util.list_files = function()
-          return { "Package.swift" }
-        end
-        assert.are.same(0, project.load())
-        assert.are.same({ path = "Package.swift", type = "package", schemes = {}, destinations = {}, tests = {} }, project.current_project)
-      end)
+      describe("Folders containg a Xcode project", function()
+        before_each(function()
+          util.get_cwd = function()
+            return "/path/cwd/"
+          end
+          stub_external_cmd(0, { "mkdir", "-p", "/path/cwd/.neoxcd" }, "")
+        end)
 
-      it("Loads a saved project", function()
-        project.current_project = nil
-        files["/path/cwd/.neoxcd/project.json"] = [[
+        it("Loads a project", function()
+          util.list_files = function(path)
+            assert.are.same("/path/cwd/", path)
+            return { "Package.swift", "project.xcodeproj" }
+          end
+          assert.are.same(0, project.load())
+          assert.are.same(
+            { path = "project.xcodeproj", type = "project", schemes = {}, destinations = {}, tests = {} },
+            project.current_project
+          )
+        end)
+
+        it("Loads a workspace", function()
+          util.list_files = function()
+            return { "Package.swift", "project.xcodeproj", "project.xcworkspace" }
+          end
+          assert.are.same(0, project.load())
+          assert.are.same(
+            { path = "project.xcworkspace", type = "workspace", schemes = {}, destinations = {}, tests = {} },
+            project.current_project
+          )
+        end)
+
+        it("Loads a package", function()
+          util.list_files = function()
+            return { "Package.swift" }
+          end
+          assert.are.same(0, project.load())
+          assert.are.same(
+            { path = "Package.swift", type = "package", schemes = {}, destinations = {}, tests = {} },
+            project.current_project
+          )
+        end)
+
+        it("Loads a saved project", function()
+          project.current_project = nil
+          files["/path/cwd/.neoxcd/project.json"] = [[
         {
           "name": "Project",
           "scheme": "Scheme",
@@ -707,20 +722,21 @@ describe("neoxcd plugin", function()
         }
         ]]
 
-        assert.are.same(0, project.load())
-        assert.are.same({
-          name = "Project",
-          path = "/the/path/to/the/project.xcodeproj",
-          type = "project",
-          scheme = "Scheme",
-          destination = {
-            platform = "iOS Simulator",
-            id = "deadbeef-deadbeefdeadbeef",
-            name = "iPhone 16 Pro",
-          },
-          schemes = { "SchemeA", "SchemeB", "SchemeC" },
-          tests = {},
-        }, project.current_project)
+          assert.are.same(0, project.load())
+          assert.are.same({
+            name = "Project",
+            path = "/the/path/to/the/project.xcodeproj",
+            type = "project",
+            scheme = "Scheme",
+            destination = {
+              platform = "iOS Simulator",
+              id = "deadbeef-deadbeefdeadbeef",
+              name = "iPhone 16 Pro",
+            },
+            schemes = { "SchemeA", "SchemeB", "SchemeC" },
+            tests = {},
+          }, project.current_project)
+        end)
       end)
     end)
   end)
