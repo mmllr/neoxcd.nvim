@@ -46,6 +46,7 @@ describe("neoxcd plugin", function()
 
   before_each(function()
     stubbed_commands = {}
+    written_files = {}
     util.setup({
       run_cmd = helpers.setup_run_cmd(stubbed_commands),
       read_file = helpers.stub_file_read(files),
@@ -169,6 +170,12 @@ describe("neoxcd plugin", function()
 
       assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
       assert.are.same("schemeB", project.current_project.scheme)
+      assert.are.same({
+        type = "project",
+        path = "project.xcodeproj",
+        scheme = "schemeB",
+        schemes = { "schemeA", "SchemeB", "schemeC" },
+      }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
     end)
 
     it("Will not update the xcode build server when selecting the same scheme", function()

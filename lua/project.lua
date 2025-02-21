@@ -258,6 +258,7 @@ function M.select_scheme(scheme)
   if result.code == M.ProjectResult.SUCCESS then
     M.current_project.scheme = scheme
   end
+  save_project()
   return result.code
 end
 
