@@ -204,6 +204,23 @@ local function save_destinations()
   end
 end
 
+---Loads the destinations from a json file
+---@async
+---@return ProjectResultCode
+local function load_cached_destinations()
+  nio.scheduler()
+  local path = util.get_cwd() .. "/.neoxcd/destinations.json"
+  local data = util.read_file(path)
+  if data ~= nil then
+    local result, dst = pcall(vim.json.decode, data, { luanil = { object = true, array = true } })
+    if result then
+      destinations = dst
+      return M.ProjectResult.SUCCESS
+    end
+  end
+  return M.ProjectResult.INVALID_JSON
+end
+
 ---Loads the project file in the current directory
 ---@async
 ---@return ProjectResultCode
@@ -215,6 +232,7 @@ function M.load()
 
   cmd({ "mkdir", "-p", util.get_cwd() .. "/.neoxcd" }, nil)
 
+  load_cached_destinations()
   return load_project()
 end
 

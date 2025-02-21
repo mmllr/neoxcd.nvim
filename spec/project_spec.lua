@@ -690,6 +690,29 @@ describe("neoxcd plugin", function()
             return "/path/cwd"
           end
           stub_external_cmd(0, { "mkdir", "-p", "/path/cwd/.neoxcd" }, "")
+          files["/path/cwd/.neoxcd/destinations.json"] = [[
+        {
+        "SchemeA": [
+          {
+            "platform": "iOS Simulator",
+            "id": "deadbeef-deadbeefdeadbeef",
+            "name": "iPhone 16 Pro"
+          },
+          {
+            "platform": "iOS",
+            "id": "caffee-caffeecaffeeffee",
+            "name": "PhoneHome"
+          }
+        ],
+        "SchemeB": [
+          {
+            "platform": "macOS",
+            "id": "deadbeef-deadbeefdeadbeef",
+            "name": "My Mac"
+          }
+        ]
+        }
+        ]]
         end)
 
         it("Loads a project", function()
@@ -731,7 +754,7 @@ describe("neoxcd plugin", function()
           files["/path/cwd/.neoxcd/project.json"] = [[
         {
           "name": "Project",
-          "scheme": "Scheme",
+          "scheme": "SchemeA",
           "type": "project",
           "path": "/the/path/to/the/project.xcodeproj",
           "destination": {
@@ -752,7 +775,7 @@ describe("neoxcd plugin", function()
             name = "Project",
             path = "/the/path/to/the/project.xcodeproj",
             type = "project",
-            scheme = "Scheme",
+            scheme = "SchemeA",
             destination = {
               platform = "iOS Simulator",
               id = "deadbeef-deadbeefdeadbeef",
@@ -761,6 +784,27 @@ describe("neoxcd plugin", function()
             schemes = { "SchemeA", "SchemeB", "SchemeC" },
             tests = {},
           }, project.current_project)
+          assert.are.same({
+            {
+              id = "deadbeef-deadbeefdeadbeef",
+              name = "iPhone 16 Pro",
+              platform = "iOS Simulator",
+            },
+            {
+              id = "caffee-caffeecaffeeffee",
+              name = "PhoneHome",
+              platform = "iOS",
+            },
+          }, project.destinations())
+
+          project.current_project.scheme = "SchemeB"
+          assert.are.same({
+            {
+              id = "deadbeef-deadbeefdeadbeef",
+              name = "My Mac",
+              platform = "macOS",
+            },
+          }, project.destinations())
         end)
       end)
     end)
