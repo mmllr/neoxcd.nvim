@@ -187,6 +187,23 @@ local function save_project()
   end
 end
 
+---Saves the destinations to a json file
+---@async
+---@return ProjectResultCode
+local function save_destinations()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  end
+  nio.scheduler()
+  local path = util.get_cwd() .. "/.neoxcd/destinations.json"
+  local result = util.write_file(path, vim.json.encode(destinations))
+  if result then
+    return M.ProjectResult.SUCCESS
+  else
+    return M.ProjectResult.INVALID_JSON
+  end
+end
+
 ---Loads the project file in the current directory
 ---@async
 ---@return ProjectResultCode
@@ -278,6 +295,7 @@ function M.load_destinations()
   local result = cmd(util.concat({ "xcodebuild", "-showdestinations", "-scheme", p.scheme, "-quiet" }, opts), nil)
   if result.code == M.ProjectResult.SUCCESS and result.stdout then
     destinations[p.scheme] = parse_destinations(result.stdout)
+    return save_destinations()
   end
   return result.code
 end

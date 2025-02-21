@@ -304,6 +304,10 @@ describe("neoxcd plugin", function()
       }
       assert.are.same(project.ProjectResult.SUCCESS, project.load_destinations())
       assert.are.same(expected, project.destinations())
+      assert.are.same(
+        { testScheme = expected },
+        vim.json.decode(written_files["/path/cwd/.neoxcd/destinations.json"], { luanil = { object = true, array = true } })
+      )
     end)
   end)
 
