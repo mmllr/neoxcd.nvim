@@ -583,45 +583,45 @@ describe("neoxcd plugin", function()
   describe("Testing", function()
     it("Discovers tests", function()
       local json = [[
-{
-  "errors" : [
-  ],
-  "values" : [
-    {
-      "children": [
-      {
-          "name": "Target",
-          "kind": "target",
-          "disabled": false,
-          "children": [
+        {
+          "errors" : [
+          ],
+          "values" : [
             {
               "children": [
-                {
-                "children": [],
-                "name": "testA",
-                "kind": "test",
-                "disabled": false
-                },
-                {
-                "children": [],
-                "name": "testB",
-                "kind": "test",
-                "disabled": false
-                }
+              {
+                  "name": "Target",
+                  "kind": "target",
+                  "disabled": false,
+                  "children": [
+                    {
+                      "children": [
+                        {
+                        "children": [],
+                        "name": "testA",
+                        "kind": "test",
+                        "disabled": false
+                        },
+                        {
+                        "children": [],
+                        "name": "testB",
+                        "kind": "test",
+                        "disabled": false
+                        }
+                      ],
+                      "name": "TestClassName",
+                      "kind": "class",
+                      "disabled": false
+                    }
+                  ]
+              }
               ],
-              "name": "TestClassName",
-              "kind": "class",
-              "disabled": false
+              "disabled" : false,
+              "kind" : "plan",
+              "name" : "PlanName"
             }
           ]
-      }
-      ],
-      "disabled" : false,
-      "kind" : "plan",
-      "name" : "PlanName"
-    }
-  ]
-}
+        }
         ]]
 
       ---@type Destination
@@ -776,7 +776,6 @@ describe("neoxcd plugin", function()
           project.current_project = nil
           files["/path/cwd/.neoxcd/project.json"] = [[
         {
-          "name": "Project",
           "scheme": "SchemeA",
           "type": "project",
           "path": "/the/path/to/the/project.xcodeproj",
@@ -795,7 +794,7 @@ describe("neoxcd plugin", function()
 
           assert.are.same(project.ProjectResult.SUCCESS, project.load())
           assert.are.same({
-            name = "Project",
+            name = "",
             path = "/the/path/to/the/project.xcodeproj",
             type = "project",
             scheme = "SchemeA",
