@@ -147,9 +147,9 @@ local function load_project()
     return M.ProjectResult.SUCCESS
   end
   local decoded = vim.json.decode(data)
-  if decoded ~= nil and decoded.name and decoded.type and decoded.path and decoded.destination and decoded.schemes then
+  if decoded ~= nil and decoded.type and decoded.path and decoded.schemes then
     M.current_project = {
-      name = decoded.name,
+      name = decoded.name or "",
       path = decoded.path,
       type = decoded.type,
       scheme = decoded.scheme,
