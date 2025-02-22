@@ -42,7 +42,7 @@ local select_schemes = function()
   if result == 0 then
     vim.notify("Selected scheme: " .. selection, vim.log.levels.INFO, { id = "Neoxcd", title = "Neoxcd" })
   else
-    vim.notify("Failed to select scheme: " .. selection, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    vim.notify("Failed to select scheme: " .. vim.inspect(selection), vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
   end
 end
 
