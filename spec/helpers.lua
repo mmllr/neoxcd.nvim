@@ -1,3 +1,5 @@
+local assert = require("luassert")
+
 ---@class StubbedCommand
 ---@field output string
 ---@field code integer|integer[]
@@ -10,6 +12,7 @@ return {
   setup_run_cmd = function(stubbed_commands)
     return function(cmd, on_stdout, on_exit)
       local key = table.concat(cmd, " ")
+      assert.is.is_not_nil(stubbed_commands[key], "Expected to find " .. key .. " in stubbed commands")
       if stubbed_commands[key].use_on_stdout then
         for line in string.gmatch(stubbed_commands[key].output, "[^\r\n]+") do
           on_stdout(nil, line)
