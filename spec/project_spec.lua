@@ -419,6 +419,8 @@ describe("neoxcd plugin", function()
     for i, d in ipairs(destinations) do
       project.select_destination(i)
       assert.are.same(d, project.current_project.destination)
+      local saved = vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"])
+      assert.are.same(d, saved.destination)
     end
   end)
 

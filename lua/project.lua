@@ -319,12 +319,14 @@ function M.load_destinations()
 end
 
 ---Select a destination
+---@async
 ---@param index number
 function M.select_destination(index)
   if M.current_project == nil or M.current_project.scheme == nil or destinations[M.current_project.scheme] == nil then
     return
   end
   M.current_project.destination = destinations[M.current_project.scheme][index]
+  save_project()
 end
 
 ---Returns the available destinations for the currently selected scheme
