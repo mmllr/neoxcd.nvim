@@ -75,32 +75,7 @@ describe("neoxcd plugin", function()
   end)
 
   describe("Scheme handling", function()
-    it("Parsing output from workspace", function()
-      local json = [[
-{
-  "workspace" : {
-    "name" : "ComposableArchitecture",
-    "schemes" : [
-      "CaseStudies (SwiftUI)",
-      "CaseStudies (UIKit)",
-      "ComposableArchitecture",
-      "Integration",
-      "Search",
-      "Sharing",
-      "SharingTests",
-      "SpeechRecognition",
-      "swift-composable-architecture-benchmark",
-      "SyncUps",
-      "TicTacToe",
-      "Todos",
-      "tvOSCaseStudies",
-      "VoiceMemos"
-    ]
-  }
-}
-  ]]
-      givenProject("workspace")
-      stub_external_cmd(0, { "xcodebuild", "-list", "-json", "-workspace", "project.xcworkspace" }, json)
+    describe("Xcode workspace", function()
       local expected = {
         "CaseStudies (SwiftUI)",
         "CaseStudies (UIKit)",
@@ -117,65 +92,113 @@ describe("neoxcd plugin", function()
         "tvOSCaseStudies",
         "VoiceMemos",
       }
+      before_each(function()
+        local json = [[
+          {
+            "workspace" : {
+              "name" : "ComposableArchitecture",
+              "schemes" : [
+                "CaseStudies (SwiftUI)",
+                "CaseStudies (UIKit)",
+                "ComposableArchitecture",
+                "Integration",
+                "Search",
+                "Sharing",
+                "SharingTests",
+                "SpeechRecognition",
+                "swift-composable-architecture-benchmark",
+                "SyncUps",
+                "TicTacToe",
+                "Todos",
+                "tvOSCaseStudies",
+                "VoiceMemos"
+              ]
+            }
+          }
+        ]]
+        givenProject("workspace")
+        stub_external_cmd(0, { "xcodebuild", "-list", "-json", "-workspace", "project.xcworkspace" }, json)
+      end)
 
-      assert.are.same(project.ProjectResult.SUCCESS, project.load_schemes())
-      assert.are.same({
-        type = "workspace",
-        path = "project.xcworkspace",
-        schemes = expected,
-      }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
-      assert.are.same(expected, project.current_project.schemes)
+      it("successfully parses the output", function()
+        assert.are.same(project.ProjectResult.SUCCESS, project.load_schemes())
+        assert.are.same(expected, project.current_project.schemes)
+      end)
+
+      it("writes the project with the schemes to the neoxcd folder", function()
+        assert.are.same(project.ProjectResult.SUCCESS, project.load_schemes())
+        assert.are.same({
+          type = "workspace",
+          path = "project.xcworkspace",
+          schemes = expected,
+        }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
+      end)
     end)
 
-    it("Parsing output from project", function()
-      local json = [[
-{
-  "project" : {
-    "configurations" : [
-      "Debug",
-      "Release"
-    ],
-    "name" : "ProjectName",
-    "schemes" : [
-      "SchemeA",
-      "SchemeB"
-    ],
-    "targets" : [
-      "TargetA",
-      "TargetB"
-    ]
-  }
-}
-  ]]
+    describe("Xcode project", function()
       local expected = {
         "SchemeA",
         "SchemeB",
       }
-      givenProject("project")
-      stub_external_cmd(0, { "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, json)
+      before_each(function()
+        local json = [[
+          {
+            "project" : {
+              "configurations" : [
+                "Debug",
+                "Release"
+              ],
+              "name" : "ProjectName",
+              "schemes" : [
+                "SchemeA",
+                "SchemeB"
+              ],
+              "targets" : [
+                "TargetA",
+                "TargetB"
+              ]
+            }
+          }
+          ]]
+        givenProject("project")
+        stub_external_cmd(0, { "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, json)
+      end)
+      it("loads the schemes from the output", function()
+        assert.are.same(0, project.load_schemes())
 
-      assert.are.same(0, project.load_schemes())
+        assert.are.same(expected, project.current_project.schemes)
+      end)
 
-      assert.are.same(expected, project.current_project.schemes)
-      assert.are.same({
-        type = "project",
-        path = "project.xcodeproj",
-        schemes = expected,
-      }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
+      it("writes the project with the schemes to the neoxcd folder", function()
+        assert.are.same(0, project.load_schemes())
+        assert.are.same({
+          type = "project",
+          path = "project.xcodeproj",
+          schemes = expected,
+        }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
+      end)
     end)
 
-    it("Selecting a scheme will update the xcode build server", function()
-      givenProject("project", nil, { "schemeA", "SchemeB", "schemeC" })
-      stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" }, "")
+    describe("Scheme selection", function()
+      before_each(function()
+        givenProject("project", "SchemeA", { "SchemeA", "SchemeB", "SchemeC" })
+        stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" }, "")
+      end)
 
-      assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
-      assert.are.same("schemeB", project.current_project.scheme)
-      assert.are.same({
-        type = "project",
-        path = "project.xcodeproj",
-        scheme = "schemeB",
-        schemes = { "schemeA", "SchemeB", "schemeC" },
-      }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
+      it("will update the xcode build server", function()
+        assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
+        assert.are.same("schemeB", project.current_project.scheme)
+      end)
+
+      it("will write the selected scheme to the neoxcd folder", function()
+        assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
+        assert.are.same({
+          type = "project",
+          path = "project.xcodeproj",
+          scheme = "schemeB",
+          schemes = { "SchemeA", "SchemeB", "SchemeC" },
+        }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
+      end)
     end)
 
     it("Will not update the xcode build server when selecting the same scheme", function()
