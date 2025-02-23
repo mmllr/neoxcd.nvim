@@ -555,6 +555,38 @@ end
 
 function M.show_runner()
   vim.cmd("botright 42vsplit Test Explorer")
+  local buf = vim.api.nvim_get_current_buf()
+  vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+
+  ---@param lines string[]
+  ---@param tests TestEnumeration[]
+  ---@param indent number
+  local function insert_test_results(lines, tests, indent)
+    for idx, test in ipairs(tests) do
+      local line = string.format("%s %s (%s)", string.rep(" ", indent), test.name, test.kind)
+      table.insert(lines, line)
+      if #test.children > 0 then
+        insert_test_results(lines, test.children, indent + 1)
+      end
+    end
+  end
+  local lines = {}
+  insert_test_results(lines, M.current_project.tests, 0)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
 
+---Gets a buffer by its name.
+---Returns also buffers that are not loaded.
+---@param name string
+---@return number|nil
+function M.get_buf_by_name(name)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(buf) == name then
+      return buf
+    end
+  end
+
+  return nil
+end
 return M
