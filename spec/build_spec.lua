@@ -228,6 +228,13 @@ note: Run script build phase 'Build number from git' will be run during every bu
     givenProject("scheme")
     project.current_project.build_settings = {}
     project.current_project.quickfixes = {}
+    project.current_target = {
+      name = "MyProduct",
+      app_path = "/path/to/app",
+      bundle_id = "com.product.myproduct",
+      plist = "/path/to/plist",
+      module_name = "MyProduct",
+    }
     stub_external_cmd(
       0,
       { "xcodebuild", "clean", "-scheme", "scheme", "-destination", "id=deadbeef", "-project", "/path/project.xcodeproj" },
@@ -236,5 +243,6 @@ note: Run script build phase 'Build number from git' will be run during every bu
     assert.are.same(0, sut.clean())
     assert.is_nil(project.current_project.quickfixes)
     assert.is_nil(project.current_project.build_settings)
+    assert.is_nil(project.current_target)
   end)
 end)

@@ -168,6 +168,7 @@ function M.clean()
   if result.code == 0 then
     project.current_project.quickfixes = nil
     project.current_project.build_settings = nil
+    project.current_target = nil
   end
   return result.code
 end
