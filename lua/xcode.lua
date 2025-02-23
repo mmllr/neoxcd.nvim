@@ -130,7 +130,7 @@ function M.build()
     log = {},
   }
   local result = M.load_build_settings()
-  if result ~= 0 then
+  if result ~= project.ProjectResult.SUCCESS then
     return result
   end
   local cmd = {
@@ -151,10 +151,10 @@ end
 ---@async @return number
 function M.clean()
   if not project.current_project.scheme then
-    return -1
+    return project.ProjectResult.NO_SCHEME
   end
   if not project.current_project.destination then
-    return -2
+    return project.ProjectResult.NO_DESTINATION
   end
   local cmd = {
     "xcodebuild",
@@ -165,7 +165,7 @@ function M.clean()
     "id=" .. project.current_project.destination.id,
   }
   local result = nio.wrap(run_build, 2)(cmd)
-  if result.code == 0 then
+  if result.code == project.ProjectResult.SUCCESS then
     project.current_project.quickfixes = nil
     project.current_project.build_settings = nil
     project.current_target = nil
@@ -178,10 +178,10 @@ end
 ---@return number
 function M.load_build_settings() -- TODO: this might be a local function
   if not project.current_project.scheme then
-    return -1
+    return project.ProjectResult.NO_SCHEME
   end
   if not project.current_project.destination then
-    return -2
+    return project.ProjectResult.NO_DESTINATION
   end
   local cmd = {
     "xcodebuild",
@@ -190,9 +190,11 @@ function M.load_build_settings() -- TODO: this might be a local function
     project.current_project.scheme,
     "-showBuildSettings",
     "-json",
+    "-destination",
+    "id=" .. project.current_project.destination.id,
   }
   local result = nio.wrap(util.run_job, 3)(cmd)
-  if result.code == 0 and result.stdout then
+  if result.code == project.ProjectResult.SUCCESS and result.stdout then
     project.current_project.build_settings = parse_settings(result.stdout)
     update_build_target()
   end

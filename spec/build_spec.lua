@@ -118,6 +118,8 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "scheme",
       "-showBuildSettings",
       "-json",
+      "-destination",
+      "id=" .. project.current_project.destination.id,
     }, json)
     stub_external_cmd(0, {
       "xcodebuild",
@@ -125,7 +127,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "-scheme",
       "scheme",
       "-destination",
-      "id=deadbeef",
+      "id=" .. project.current_project.destination.id,
       "-configuration",
       "Debug",
       "-project",
@@ -157,7 +159,7 @@ note: Run script build phase 'Build number from git' will be run during every bu
       },
     }
 
-    assert.are.same(0, sut.build())
+    assert.are.same(project.ProjectResult.SUCCESS, sut.build())
     assert.are.same(expected, project.current_project.quickfixes)
     assert.are.same("/Users/user/MyProject/MyProject.xcodeproj", project.current_project.path)
     assert.are.same("MyProject", project.current_project.name)
@@ -209,6 +211,8 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "scheme",
       "-showBuildSettings",
       "-json",
+      "-destination",
+      "id=" .. project.current_project.destination.id,
     }, json)
 
     assert.are.same(0, sut.load_build_settings())
