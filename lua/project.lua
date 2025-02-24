@@ -2,6 +2,7 @@ local nio = require("nio")
 local util = require("util")
 local types = require("types")
 local simulator = require("simulator")
+local runner = require("runner")
 
 local M = {}
 
@@ -558,20 +559,7 @@ function M.show_runner()
   local buf = vim.api.nvim_get_current_buf()
   vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
 
-  ---@param lines string[]
-  ---@param tests TestEnumeration[]
-  ---@param indent number
-  local function insert_test_results(lines, tests, indent)
-    for idx, test in ipairs(tests) do
-      local line = string.format("%s %s (%s)", string.rep(" ", indent), test.name, test.kind)
-      table.insert(lines, line)
-      if #test.children > 0 then
-        insert_test_results(lines, test.children, indent + 1)
-      end
-    end
-  end
-  local lines = {}
-  insert_test_results(lines, M.current_project.tests, 0)
+  local lines = runner.format(M.current_project.tests)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
