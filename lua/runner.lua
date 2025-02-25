@@ -1,31 +1,34 @@
 local M = {}
-
-local kind_symbols = {
-  plan = "󰙨",
-  target = "",
+---@type table<TestEnumerationKind, string>
+local symbols = {
+  plan = "╮󰙨",
+  target = "╮",
   test = "",
+  class = "╮󰅩",
 }
 
----@param lines string[]
----@param tests TestEnumeration[]
----@param indent number
-local function insert_test_results(lines, tests, indent)
-  for idx, test in ipairs(tests) do
-    local symbol = string.rep(" ", indent - 1)
-    if indent > 0 then
-      if idx == 1 then
-        symbol = symbol .. "╰"
+---@param node TestEnumeration
+---@param prefix string
+---@param is_last boolean
+---@return string[]
+local function format_tree(node, prefix, is_last)
+  local lines = {}
+  local symbol = symbols[node.kind]
+  local connector = (is_last and "╰─" or "├─")
+  local line = prefix .. connector .. symbol .. " " .. node.name
+  table.insert(lines, line)
+
+  if #node.children > 0 then
+    for i, child in ipairs(node.children) do
+      local new_prefix = prefix .. (is_last and "  " or "│ ")
+      local child_lines = format_tree(child, new_prefix, i == #node.children)
+      for _, child_line in ipairs(child_lines) do
+        table.insert(lines, child_line)
       end
-      if #test.children > 0 then
-        symbol = symbol .. "╮"
-      end
-    end
-    local line = string.format("%s%s %s", symbol, kind_symbols[test.kind], test.name)
-    table.insert(lines, line)
-    if #test.children > 0 then
-      insert_test_results(lines, test.children, indent + 1)
     end
   end
+
+  return lines
 end
 
 ---Formats a list of TestEnumeration objects for display in the runner list
@@ -33,7 +36,14 @@ end
 ---@return string[] List of formatted results
 function M.format(results)
   local lines = {}
-  insert_test_results(lines, results, 0)
+
+  for i, node in ipairs(results) do
+    local is_last = i == #results
+    local line = format_tree(node, "", is_last)
+    for _, child_line in ipairs(line) do
+      table.insert(lines, child_line)
+    end
+  end
   return lines
 end
 
