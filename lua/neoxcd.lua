@@ -180,4 +180,13 @@ return {
     end
     project.show_runner()
   end),
+  test = nio.create(function()
+    spinner.start("Running tests...")
+    local result = project.run_tests()
+    nio.scheduler()
+    spinner.stop()
+    if result ~= 0 then
+      vim.notify("Failed to run tests, result: " .. result, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+    end
+  end),
 }

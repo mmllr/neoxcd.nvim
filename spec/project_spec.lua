@@ -583,6 +583,19 @@ describe("neoxcd plugin", function()
   end)
 
   describe("Testing", function()
+    ---@type Destination
+    local sim = {
+      platform = types.Platform.IOS_SIMULATOR,
+      id = "deadbeef-deadbeefdeadbeef",
+      name = "iPhone 16 Pro",
+    }
+    before_each(function()
+      givenProject("project", "testScheme", {}, sim)
+      ---@diagnostic disable-next-line: duplicate-set-field
+      util.get_cwd = function()
+        return "/cwd"
+      end
+    end)
     it("Discovers tests", function()
       local json = [[
         {
@@ -626,17 +639,6 @@ describe("neoxcd plugin", function()
         }
         ]]
 
-      ---@type Destination
-      local sim = {
-        platform = types.Platform.IOS_SIMULATOR,
-        id = "deadbeef-deadbeefdeadbeef",
-        name = "iPhone 16 Pro",
-      }
-      givenProject("project", "testScheme", {}, sim)
-      ---@diagnostic disable-next-line: duplicate-set-field
-      util.get_cwd = function()
-        return "/cwd"
-      end
       files["/cwd/.neoxcd/tests.json"] = json
       stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/tests.json" }, "")
       stub_external_cmd(0, {
@@ -696,7 +698,26 @@ describe("neoxcd plugin", function()
         },
       }, project.current_project.tests)
     end)
+
+    it("Runs test", function()
+      stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/tests.xcresult" }, "")
+      stub_external_cmd(0, {
+        "xcodebuild",
+        "test",
+        "-scheme",
+        "testScheme",
+        "-destination",
+        "id=deadbeef-deadbeefdeadbeef",
+        "-resultBundlePath",
+        "/cwd/.neoxcd/tests.xcresult",
+        "-project",
+        "project.xcodeproj",
+      }, "")
+
+      assert.are.same(project.ProjectResult.SUCCESS, project.run_tests())
+    end)
   end)
+
   describe("Project setup", function()
     it("wit not create an .neoxcd folder for project not containing no Xcode project", function()
       util.get_cwd = function()

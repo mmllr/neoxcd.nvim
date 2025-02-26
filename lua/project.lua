@@ -564,17 +564,35 @@ function M.show_runner()
   vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
 
----Gets a buffer by its name.
----Returns also buffers that are not loaded.
----@param name string
----@return number|nil
-function M.get_buf_by_name(name)
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_get_name(buf) == name then
-      return buf
-    end
+---Runs the tests in the current project
+---@async
+---@return ProjectResultCode
+function M.run_tests()
+  if M.current_project == nil then
+    return M.ProjectResult.NO_PROJECT
+  elseif M.current_project.destination == nil then
+    return M.ProjectResult.NO_DESTINATION
+  elseif M.current_project.scheme == nil then
+    return M.ProjectResult.NO_SCHEME
   end
 
-  return nil
+  local results_path = util.get_cwd() .. "/.neoxcd/tests.xcresult"
+  cmd({ "rm", "-rf", results_path }, nil)
+  local opts = M.build_options_for_project(M.current_project)
+  local result = cmd(
+    util.concat({
+      "xcodebuild",
+      "test",
+      "-scheme",
+      M.current_project.scheme,
+      "-destination",
+      "id=" .. M.current_project.destination.id,
+      "-resultBundlePath",
+      results_path,
+    }, opts),
+    nil
+  )
+  return result.code
 end
+
 return M
