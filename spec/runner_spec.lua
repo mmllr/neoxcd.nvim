@@ -88,4 +88,11 @@ describe("Test runner", function()
       "      ╰─ Test2",
     }, sut.format(results))
   end)
+
+  it("Parses test results", function()
+    ---@type TestEnumeration[]
+    local results = {}
+
+    assert.are.same({}, sut.format(results))
+  end)
 end)

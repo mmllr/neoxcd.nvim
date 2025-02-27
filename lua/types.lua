@@ -141,4 +141,25 @@ M.ProjectConstants = {
 ---@field kind TestEnumerationKind
 ---@field name string
 
+---A test node kind
+---@alias TestNodeType
+---| "Test Plan"
+---| "Test Case"
+---| "Test Suite"
+---| "Arguments"
+---| "Unit test bundle"
+---| "Failure Message"
+
+---The result for a test node
+---@alias TestNodeResult "Failed" | "Passed"
+
+---A node for a runned test
+---@class TestNode
+---@field name string
+---@field kind TestNodeType
+---@field result TestNodeResult
+---@field nodeIdentifier? string
+---@field duration? number
+---@field children TestNode[]?
+
 return M
