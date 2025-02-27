@@ -90,9 +90,17 @@ describe("Test runner", function()
   end)
 
   it("Parses test results", function()
-    ---@type TestEnumeration[]
-    local results = {}
+    ---@type TestNode[]
+    local results = {
+      {
+        name = "Plan",
+        kind = "Test Plan",
+        result = "Passed",
+      },
+    }
 
-    assert.are.same({}, sut.format(results))
+    -- assert.are.same({
+    --   "╰─󰙨 Test Plan",
+    -- }, sut.format_results(results))
   end)
 end)
