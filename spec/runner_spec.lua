@@ -4,9 +4,10 @@ local util = require("util")
 local helpers = require("spec/helpers")
 
 describe("Test runner", function()
+  local sut = require("runner")
   local nio = require("nio")
   local it = nio.tests.it
-  it("parses test results", function()
+  it("parses enumerated tests", function()
     ---@type TestEnumeration[]
     local results = {
       {
@@ -74,8 +75,6 @@ describe("Test runner", function()
         },
       },
     }
-    -- │╰╮
-    local runner = require("runner")
     assert.are.same({
       "╰─╮󰙨 Test Plan",
       "  ╰─╮ Test target",
@@ -87,6 +86,6 @@ describe("Test runner", function()
       "    ╰─╮󰅩 TestCase2",
       "      ├─ Test1",
       "      ╰─ Test2",
-    }, runner.format(results))
+    }, sut.format(results))
   end)
 end)
