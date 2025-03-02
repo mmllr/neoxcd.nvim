@@ -17,6 +17,10 @@ describe("Build logic", function()
       run_cmd = helpers.setup_run_cmd(stubbed_commands),
     })
     project.current_project = nil
+    ---@diagnostic disable-next-line: duplicate-set-field
+    util.get_cwd = function()
+      return "/cwd"
+    end
   end)
 
   ---@param code number
@@ -45,13 +49,6 @@ describe("Build logic", function()
     }
   end
 
-  teardown(function()
-    if previous_run_job then
-      util.run_job = previous_run_job
-    end
-    previous_run_job = nil
-  end)
-
   after_each(function()
     project.current_project = nil
     project.current_target = nil
@@ -60,57 +57,80 @@ describe("Build logic", function()
 
   it("parses logs without build errors", function()
     givenProject("scheme")
-    local logs = [[
-LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
-LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
-/Users/user/Document.swift:15:19: warning: value 'data' was defined but never used; consider replacing with boolean test
-        guard let data = configuration.file.regularFileContents
-              ~~~~^~~~~~~
-                                                                != nil
-LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
-LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
-/Users/user/View.swift:21:20: error: value 'destination' was defined but never used; consider replacing with boolean test
-            if let destination = store.scope(state: \.destination?, action: \.destination.presented) {
-               ~~~~^~~~~~~~~~~~~~
-                                                                                                     != nil
-/Users/user/Feature.swift:144:41: warning: immutable value 'sectionID' was never used; consider replacing with '_' or removing it
-            case let .sections(.element(sectionID, .rows(.element(bookID, .tapped)))):
-                                        ^~~~~~~~~
-                                        _
-LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
-LLVM Profile Error: Failed to write file "default.profraw": Operation not permitted
-note: Run script build phase 'Build number from git' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'CantatasEditor' from project 'Cantatas')
-      ]]
+    local buildResults = [[
+    {
+      "actionTitle" : "Build \"Cantatas\"",
+      "analyzerWarningCount" : 0,
+      "analyzerWarnings" : [
 
+      ],
+      "destination" : {
+        "architecture" : "arm64",
+        "deviceId" : "AAB6B1B4-9363-4020-A42B-96F2BDC5A3BF",
+        "deviceName" : "iPhone 16",
+        "modelName" : "iPhone 16",
+        "osVersion" : "18.2",
+        "platform" : "iOS Simulator"
+      },
+      "endTime" : 1740948664.642,
+      "errorCount" : 1,
+      "errors" : [
+        {
+          "className" : "DVTTextDocumentLocation",
+          "issueType" : "Swift Compiler Error",
+          "message" : "Cannot find 'name' in scope",
+          "sourceURL" : "file:///Users/user/Hello.swift#EndingColumnNumber=8&EndingLineNumber=20&StartingColumnNumber=8&StartingLineNumber=20&Timestamp=762641443.309049"
+        }
+      ],
+      "startTime" : 1740948643.285,
+      "status" : "failed",
+      "warningCount" : 1,
+      "warnings" : [
+        {
+          "className" : "DVTTextDocumentLocation",
+          "issueType" : "Deprecation",
+          "message" : "'eraseToStream()' is deprecated: Explicitly wrap this async sequence with 'UncheckedSendable' before erasing to stream.",
+          "sourceURL" : "file:///Users/user/World.swift#EndingColumnNumber=21&EndingLineNumber=30&StartingColumnNumber=21&StartingLineNumber=30&Timestamp=762641443.309049"
+        },
+        {
+          "className" : "DVTTextDocumentLocation",
+          "issueType" : "Unused ",
+          "message" : "value 'data' was defined but never used; consider replacing with boolean test",
+          "sourceURL" : "file:///Users/user/Document.swift#EndingColumnNumber=19&EndingLineNumber=15&StartingColumnNumber=19&StartingLineNumber=15&Timestamp=762641443.309049"
+        }
+      ]
+    }
+    ]]
     local json = [[
-[
-  {
-    "action" : "build",
-    "buildSettings" : {
-      "PRODUCT_BUNDLE_IDENTIFIER" : "com.product.myproduct",
-      "PRODUCT_BUNDLE_PACKAGE_TYPE" : "APPL",
-      "PRODUCT_MODULE_NAME" : "MyProduct-Folder",
-      "PRODUCT_NAME" : "MyProduct",
-      "PRODUCT_SETTINGS_PATH" : "/Users/user/MyProject-Folder/MyProduct/Info.plist",
-      "PRODUCT_TYPE" : "com.apple.product-type.application",
-      "PROFILING_CODE" : "NO",
-      "PROJECT" : "MyProject",
-      "PROJECT_DERIVED_FILE_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources",
-      "PROJECT_DIR" : "/Users/user/MyProject",
-      "PROJECT_FILE_PATH" : "/Users/user/MyProject/MyProject.xcodeproj",
-      "PROJECT_GUID" : "ad98a1d3d4fc98c1821c175190d3f",
-      "PROJECT_NAME" : "MyProject",
-      "PROJECT_TEMP_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build",
-      "PROJECT_TEMP_ROOT" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex",
-      "TARGET_BUILD_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator",
-      "WRAPPER_NAME" : "MyProduct.app",
-      "FULL_PRODUCT_NAME" : "MyProduct.app"
-    },
-    "target" : "MyProduct"
-  }
-]
+    [
+      {
+        "action" : "build",
+        "buildSettings" : {
+          "PRODUCT_BUNDLE_IDENTIFIER" : "com.product.myproduct",
+          "PRODUCT_BUNDLE_PACKAGE_TYPE" : "APPL",
+          "PRODUCT_MODULE_NAME" : "MyProduct-Folder",
+          "PRODUCT_NAME" : "MyProduct",
+          "PRODUCT_SETTINGS_PATH" : "/Users/user/MyProject-Folder/MyProduct/Info.plist",
+          "PRODUCT_TYPE" : "com.apple.product-type.application",
+          "PROFILING_CODE" : "NO",
+          "PROJECT" : "MyProject",
+          "PROJECT_DERIVED_FILE_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources",
+          "PROJECT_DIR" : "/Users/user/MyProject",
+          "PROJECT_FILE_PATH" : "/Users/user/MyProject/MyProject.xcodeproj",
+          "PROJECT_GUID" : "ad98a1d3d4fc98c1821c175190d3f",
+          "PROJECT_NAME" : "MyProject",
+          "PROJECT_TEMP_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build",
+          "PROJECT_TEMP_ROOT" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex",
+          "TARGET_BUILD_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator",
+          "WRAPPER_NAME" : "MyProduct.app",
+          "FULL_PRODUCT_NAME" : "MyProduct.app"
+        },
+        "target" : "MyProduct"
+      }
+      ]
       ]]
 
+    stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/build.xcresult" }, "")
     stub_external_cmd(0, {
       "xcodebuild",
       "build",
@@ -130,32 +150,43 @@ note: Run script build phase 'Build number from git' will be run during every bu
       "id=" .. project.current_project.destination.id,
       "-configuration",
       "Debug",
+      "--resultBundlePath",
+      "/cwd/.neoxcd/build.xcresult",
       "-project",
       "/Users/user/MyProject/MyProject.xcodeproj",
-    }, logs, true)
+    }, "")
+    -- xcrun xcresulttool get build-results --path results.xcresult
+    stub_external_cmd(0, {
+      "xcrun",
+      "xcresulttool",
+      "get",
+      "build-results",
+      "--path",
+      "/cwd/.neoxcd/build.xcresult",
+    }, buildResults)
 
     ---@type QuickfixEntry[]
     local expected = {
+      {
+        filename = "/Users/user/Hello.swift",
+        lnum = 20,
+        col = 8,
+        type = "E",
+        text = "Cannot find 'name' in scope",
+      },
+      {
+        filename = "/Users/user/World.swift",
+        lnum = 30,
+        col = 21,
+        type = "W",
+        text = "'eraseToStream()' is deprecated: Explicitly wrap this async sequence with 'UncheckedSendable' before erasing to stream.",
+      },
       {
         filename = "/Users/user/Document.swift",
         lnum = 15,
         col = 19,
         type = "W",
         text = "value 'data' was defined but never used; consider replacing with boolean test",
-      },
-      {
-        filename = "/Users/user/View.swift",
-        lnum = 21,
-        col = 20,
-        text = "value 'destination' was defined but never used; consider replacing with boolean test",
-        type = "E",
-      },
-      {
-        filename = "/Users/user/Feature.swift",
-        lnum = 144,
-        col = 41,
-        text = "immutable value 'sectionID' was never used; consider replacing with '_' or removing it",
-        type = "W",
       },
     }
 

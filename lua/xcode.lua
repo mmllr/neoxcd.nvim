@@ -19,41 +19,60 @@ local function parse_settings(input)
   end
   return data
 end
----Parse the output of `xcodebuild` into Quickfix entry types
----@param type string
----@return QuickfixEntryType|nil
-local function get_type(type)
-  if type == "error" then
-    return types.QuickfixEntryType.ERROR
-  elseif type == "warning" then
-    return types.QuickfixEntryType.WARNING
-  else
-    return nil
+
+---Extracts filename, line and column from a source URL string
+---@param string string
+---@return string|nil, number|nil, number|nil
+local function parse_source_url(string)
+  -- file:///Users/user/Document.swift#EndingColumnNumber=19&EndingLineNumber=15&StartingColumnNumber=19&StartingLineNumber=15&Timestamp=762641443.309049-- Extract filename
+
+  local filename = string:match("file://([^#]+)")
+  local line = string:match("StartingLineNumber=(%d+)")
+  local column = string:match("StartingColumnNumber=(%d+)")
+  if line then
+    line = tonumber(line)
   end
+  if column then
+    column = tonumber(column)
+  end
+  return filename, line, column
 end
 
 ---Parse the output of `xcodebuild` into an optional error message
----@param error_message string
+---@param json string The json output of `xcodebuild`
 ---@return QuickfixEntry|nil
-local function parse_error_message(error_message)
-  local rex = require("rex_posix")
-  local filename, line, column, type, message = rex.match(error_message, "^(.+):([0-9]+):([0-9]+): (error|warning): (.+)$")
-  if filename and line and column and type and message then
-    local lnum = tonumber(line)
-    local col = tonumber(column)
-    local qfixtype = get_type(type)
-    if lnum == nil or col == nil or type == nil then
-      return nil
+local function parse_build_results(json)
+  if project.current_project.quickfixes == nil then
+    project.current_project.quickfixes = {}
+  end
+  local data = vim.json.decode(json)
+  for _, error in ipairs(data["errors"]) do
+    if error["sourceURL"] then
+      local filename, lnum, col = parse_source_url(error["sourceURL"])
+      if filename and lnum and col then
+        table.insert(project.current_project.quickfixes, {
+          filename = filename,
+          lnum = lnum,
+          col = col,
+          type = types.QuickfixEntryType.ERROR,
+          text = error["message"],
+        })
+      end
     end
-    return {
-      filename = filename,
-      lnum = lnum,
-      col = col,
-      type = qfixtype,
-      text = message,
-    }
-  else
-    return nil
+  end
+  for _, warning in ipairs(data["warnings"]) do
+    if warning["sourceURL"] then
+      local filename, lnum, col = parse_source_url(warning["sourceURL"])
+      if filename and lnum and col then
+        table.insert(project.current_project.quickfixes, {
+          filename = filename,
+          lnum = lnum,
+          col = col,
+          type = types.QuickfixEntryType.WARNING,
+          text = warning["message"],
+        })
+      end
+    end
   end
 end
 
@@ -93,20 +112,6 @@ local function add_build_log(line)
   table.insert(build.log, line)
 end
 
----@param line string
-local function add_quickfix(line)
-  if not project.current_project then
-    return
-  end
-  if project.current_project.quickfixes == nil then
-    project.current_project.quickfixes = {}
-  end
-  local entry = parse_error_message(line)
-  if entry then
-    table.insert(project.current_project.quickfixes, entry)
-  end
-end
-
 ---@param callback fun(code: vim.SystemCompleted)
 local function run_build(cmd, callback)
   project.append_options_if_needed(cmd, project.current_project)
@@ -114,7 +119,6 @@ local function run_build(cmd, callback)
     if data then
       for line in data:gmatch("[^\n]+") do
         add_build_log(line)
-        add_quickfix(line)
       end
     end
   end, callback)
@@ -133,6 +137,9 @@ function M.build()
   if result ~= project.ProjectResult.SUCCESS then
     return result
   end
+
+  local run_job = nio.wrap(util.run_job, 3)
+  run_job({ "rm", "-rf", util.get_cwd() .. "/.neoxcd/build.xcresult" })
   local cmd = {
     "xcodebuild",
     "build",
@@ -142,9 +149,23 @@ function M.build()
     "id=" .. project.current_project.destination.id,
     "-configuration",
     "Debug",
+    "--resultBundlePath",
+    util.get_cwd() .. "/.neoxcd/build.xcresult",
   }
-  result = nio.wrap(run_build, 2)(cmd)
-  return result.code
+  local build_result = nio.wrap(run_build, 2)(cmd)
+  result = run_job({
+    "xcrun",
+    "xcresulttool",
+    "get",
+    "build-results",
+    "--path",
+    util.get_cwd() .. "/.neoxcd/build.xcresult",
+  })
+
+  if result.code == project.ProjectResult.SUCCESS and result.stdout then
+    parse_build_results(result.stdout)
+  end
+  return build_result.code
 end
 
 ---Builds the target
