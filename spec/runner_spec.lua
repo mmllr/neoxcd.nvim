@@ -94,13 +94,39 @@ describe("Test runner", function()
     local results = {
       {
         name = "Plan",
-        kind = "Test Plan",
+        nodeType = "Test Plan",
         result = "Passed",
+        children = {
+          {
+            name = "Test target",
+            nodeType = "Unit test bundle",
+            result = "Passed",
+            children = {
+              {
+                name = "Test",
+                nodeType = "Test Suite",
+                result = "Failed",
+                children = {
+                  {
+                    duration = "1.234s",
+                    name = "testSomething()",
+                    nodeIdentifier = "Test/testSomething()",
+                    nodeType = "Test Case",
+                    result = "Passed",
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     }
 
-    -- assert.are.same({
-    --   "╰─󰙨 Test Plan",
-    -- }, sut.format_results(results))
+    assert.are.same({
+      "╰─╮󰙨 Plan []",
+      "  ╰─╮ Test target []",
+      "    ╰─╮󰅩 Test []",
+      "      ╰─ testSomething() []",
+    }, sut.format(results))
   end)
 end)

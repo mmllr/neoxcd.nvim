@@ -156,10 +156,10 @@ M.ProjectConstants = {
 ---A node for a runned test
 ---@class TestNode
 ---@field name string
----@field kind TestNodeType
+---@field nodeType TestNodeType
 ---@field result TestNodeResult
 ---@field nodeIdentifier? string
----@field duration? number
+---@field duration? string
 ---@field children TestNode[]?
 
 return M
