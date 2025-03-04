@@ -730,7 +730,7 @@ describe("neoxcd plugin", function()
       assert.are.same(project.ProjectResult.NO_PROJECT, project.load())
     end)
 
-    describe("Folders containg a Xcode project", function()
+    describe("Folders containing a Xcode project", function()
       before_each(function()
         util.get_cwd = function()
           return "/path/cwd"
