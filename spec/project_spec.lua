@@ -713,8 +713,103 @@ describe("neoxcd plugin", function()
         "-project",
         "project.xcodeproj",
       }, "")
+      stub_external_cmd(
+        0,
+        {
+          "xcrun",
+          "xcresulttool",
+          "get",
+          "build-results",
+          "--path",
+          "/cwd/.neoxcd/tests.xcresult",
+        },
+        [[
+      {
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "9D4089D2-83A1-4AAA-B2C1-F87C702BD7BE",
+      "deviceName" : "iPhone 16 Pro",
+      "modelName" : "iPhone 16 Pro",
+      "osVersion" : "18.2",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+  {
+      "name" : "My Plan",
+      "nodeType" : "Test Plan",
+      "result" : "Failed",
+      "children": [
+         {
+          "name" : "FeatureTests",
+          "nodeType" : "Unit test bundle",
+          "result" : "Passed",
+          "children" : [
+            {
+              "name" : "Test",
+              "nodeType" : "Test Suite",
+              "result" : "Passed",
+              "children" : [
+                {
+                  "duration" : "0,025s",
+                  "name" : "testNavigation()",
+                  "nodeIdentifier" : "Test/testNavigation()",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+   ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Configuration 1"
+    }
+  ]
+   }
+      ]]
+      )
 
       assert.are.same(project.ProjectResult.SUCCESS, project.run_tests())
+      assert.are.same(
+        ---@type TestNode[]
+        {
+          {
+            name = "My Plan",
+            nodeType = "Test Plan",
+            result = "Failed",
+            children = {
+              {
+                name = "FeatureTests",
+                nodeType = "Unit test bundle",
+                result = "Passed",
+                children = {
+                  {
+                    name = "Test",
+                    nodeType = "Test Suite",
+                    result = "Passed",
+                    children = {
+                      {
+                        duration = "0,025s",
+                        name = "testNavigation()",
+                        nodeIdentifier = "Test/testNavigation()",
+                        nodeType = "Test Case",
+                        result = "Passed",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        project.current_project.test_results
+      )
     end)
   end)
 

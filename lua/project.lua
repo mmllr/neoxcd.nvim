@@ -592,6 +592,26 @@ function M.run_tests()
     }, opts),
     nil
   )
+  local test_result = cmd({
+    "xcrun",
+    "xcresulttool",
+    "get",
+    "build-results",
+    "--path",
+    results_path,
+  }, nil)
+  if test_result.code == 0 and test_result.stdout then
+    local data = vim.json.decode(test_result.stdout, {
+      luanil = {
+        object = true,
+        array = true,
+      },
+    })
+    if data == nil or data.testNodes == nil then
+      return M.ProjectResult.INVALID_JSON
+    end
+    M.current_project.test_results = data.testNodes
+  end
   return result.code
 end
 
