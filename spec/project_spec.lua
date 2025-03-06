@@ -719,9 +719,11 @@ describe("neoxcd plugin", function()
           "xcrun",
           "xcresulttool",
           "get",
-          "build-results",
+          "test-results",
+          "tests",
           "--path",
           "/cwd/.neoxcd/tests.xcresult",
+          "--compact",
         },
         [[
       {

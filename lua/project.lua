@@ -599,9 +599,11 @@ function M.run_tests()
     "xcrun",
     "xcresulttool",
     "get",
-    "build-results",
+    "test-results",
+    "tests",
     "--path",
     results_path,
+    "--compact",
   }, nil)
   if test_result.code == 0 and test_result.stdout then
     local data = vim.json.decode(test_result.stdout, {

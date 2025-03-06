@@ -24,7 +24,7 @@ local results = {
 local function format_item(item, is_last)
   local key = item.kind or item.nodeType
 
-  local symbol = symbols[key]
+  local symbol = symbols[key] or "???"
   local connector = (is_last and "╰─" or "├─")
   local result = item.result and results[item.result] or ""
   return connector .. symbol .. " " .. item.name .. result
