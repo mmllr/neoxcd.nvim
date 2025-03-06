@@ -509,6 +509,7 @@ function M.discover_tests()
   end
 
   M.current_project.tests = {}
+  nio.scheduler()
   local output = util.get_cwd() .. "/.neoxcd/tests.json"
   cmd({ "rm", "-rf", output }, nil)
 
@@ -577,6 +578,7 @@ function M.run_tests()
     return M.ProjectResult.NO_SCHEME
   end
 
+  nio.scheduler()
   local results_path = util.get_cwd() .. "/.neoxcd/tests.xcresult"
   cmd({ "rm", "-rf", results_path }, nil)
   local opts = M.build_options_for_project(M.current_project)

@@ -139,7 +139,9 @@ function M.build()
   end
 
   local run_job = nio.wrap(util.run_job, 3)
-  run_job({ "rm", "-rf", util.get_cwd() .. "/.neoxcd/build.xcresult" })
+  nio.scheduler()
+  local result_bundle_path = util.get_cwd() .. "/.neoxcd/build.xcresult"
+  run_job({ "rm", "-rf", result_bundle_path })
   local cmd = {
     "xcodebuild",
     "build",
@@ -150,7 +152,7 @@ function M.build()
     "-configuration",
     "Debug",
     "--resultBundlePath",
-    util.get_cwd() .. "/.neoxcd/build.xcresult",
+    result_bundle_path,
   }
   local build_result = nio.wrap(run_build, 2)(cmd)
   result = run_job({
@@ -159,7 +161,7 @@ function M.build()
     "get",
     "build-results",
     "--path",
-    util.get_cwd() .. "/.neoxcd/build.xcresult",
+    result_bundle_path,
   })
 
   if result.code == project.ProjectResult.SUCCESS and result.stdout then
