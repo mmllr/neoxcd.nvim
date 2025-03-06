@@ -150,7 +150,7 @@ describe("Build logic", function()
       "id=" .. project.current_project.destination.id,
       "-configuration",
       "Debug",
-      "--resultBundlePath",
+      "-resultBundlePath",
       "/cwd/.neoxcd/build.xcresult",
       "-project",
       "/Users/user/MyProject/MyProject.xcodeproj",

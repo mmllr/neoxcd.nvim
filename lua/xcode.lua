@@ -151,7 +151,7 @@ function M.build()
     "id=" .. project.current_project.destination.id,
     "-configuration",
     "Debug",
-    "--resultBundlePath",
+    "-resultBundlePath",
     result_bundle_path,
   }
   local build_result = nio.wrap(run_build, 2)(cmd)
