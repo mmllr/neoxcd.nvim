@@ -560,7 +560,7 @@ function M.show_runner()
   vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
 
   local results = M.current_project.test_results or M.current_project.tests
-  local lines = runner.format(results)
+  local lines = results and #results > 0 and runner.format(results) or { "No tests found" }
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
