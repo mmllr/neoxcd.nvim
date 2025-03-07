@@ -169,22 +169,22 @@ describe("Build logic", function()
     local expected = {
       {
         filename = "/Users/user/Hello.swift",
-        lnum = 20,
-        col = 8,
+        lnum = 21, --- indices are 1-based
+        col = 9,
         type = "E",
         text = "Cannot find 'name' in scope",
       },
       {
         filename = "/Users/user/World.swift",
-        lnum = 30,
-        col = 21,
+        lnum = 31,
+        col = 22,
         type = "W",
         text = "'eraseToStream()' is deprecated: Explicitly wrap this async sequence with 'UncheckedSendable' before erasing to stream.",
       },
       {
         filename = "/Users/user/Document.swift",
-        lnum = 15,
-        col = 19,
+        lnum = 16,
+        col = 20,
         type = "W",
         text = "value 'data' was defined but never used; consider replacing with boolean test",
       },

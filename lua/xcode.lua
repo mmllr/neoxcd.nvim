@@ -52,8 +52,8 @@ local function parse_build_results(json)
       if filename and lnum and col then
         table.insert(project.current_project.quickfixes, {
           filename = filename,
-          lnum = lnum,
-          col = col,
+          lnum = lnum + 1,
+          col = col + 1,
           type = types.QuickfixEntryType.ERROR,
           text = error["message"],
         })
@@ -66,8 +66,8 @@ local function parse_build_results(json)
       if filename and lnum and col then
         table.insert(project.current_project.quickfixes, {
           filename = filename,
-          lnum = lnum,
-          col = col,
+          lnum = lnum + 1,
+          col = col + 1,
           type = types.QuickfixEntryType.WARNING,
           text = warning["message"],
         })
