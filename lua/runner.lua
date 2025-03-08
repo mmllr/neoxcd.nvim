@@ -1,5 +1,5 @@
 local M = {}
----@type table<TestEnumerationKind, string>
+---@type table<string, string>
 local symbols = {
   plan = "╮󰙨",
   target = "╮",
@@ -10,6 +10,7 @@ local symbols = {
   ["Test Case"] = "",
   ["Test Plan"] = "╮󰙨",
   ["Arguments"] = "",
+  ["Repetition"] = "",
 }
 
 local results = {
