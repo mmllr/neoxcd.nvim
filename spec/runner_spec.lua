@@ -129,4 +129,52 @@ describe("Test runner", function()
       "      ╰─ testSomething() []",
     }, sut.format(results))
   end)
+
+  it("Parses failure messages with new-lines", function()
+    ---@type TestNode[]
+    local results = {
+      {
+        name = "Plan",
+        nodeType = "Test Plan",
+        result = "Passed",
+        children = {
+          {
+            name = "Test target",
+            nodeType = "Unit test bundle",
+            result = "Passed",
+            children = {
+              {
+                name = "Test",
+                nodeType = "Test Suite",
+                result = "Failed",
+                children = {
+                  {
+                    duration = "1.234s",
+                    name = "testSomething()",
+                    nodeIdentifier = "Test/testSomething()",
+                    nodeType = "Test Case",
+                    result = "Failed",
+                    children = {
+                      {
+                        name = "TestSuite.swift:41: Issue recorded: A state change does not match expectation: …\n\n      State(\n        _selection: .someState,\n\n(Expected: −, Actual: +)",
+                        nodeType = "Failure Message",
+                        result = "Failed",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+
+    assert.are.same({
+      "╰─╮󰙨 Plan []",
+      "  ╰─╮ Test target []",
+      "    ╰─╮󰅩 Test []",
+      "      ╰─ testSomething() []",
+    }, sut.format(results))
+  end)
 end)

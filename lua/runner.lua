@@ -17,6 +17,21 @@ local results = {
   ["Failed"] = " []",
 }
 
+---@type string[]
+local included_node_types = {
+  "plan",
+  "target",
+  "test",
+  "class",
+  "Test Plan",
+  "Test Case",
+  "Test Suite",
+  "Unit test bundle",
+  "Arguments",
+  "Repetition",
+  "UI test bundle",
+}
+
 ---Formats a test enumeration or a test node for display in the runner list
 ---@param item TestNode|TestEnumeration
 ---@param is_last boolean
@@ -41,9 +56,11 @@ local function format_node(node, prefix, is_last)
   if node.children and #node.children > 0 then
     for i, child in ipairs(node.children) do
       local new_prefix = prefix .. (is_last and "  " or "│ ")
-      local child_lines = format_node(child, new_prefix, i == #node.children)
-      for _, child_line in ipairs(child_lines) do
-        table.insert(lines, child_line)
+      if vim.tbl_contains(included_node_types, child.nodeType or child.kind) then
+        local child_lines = format_node(child, new_prefix, i == #node.children)
+        for _, child_line in ipairs(child_lines) do
+          table.insert(lines, child_line)
+        end
       end
     end
   end
