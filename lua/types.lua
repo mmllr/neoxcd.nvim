@@ -150,17 +150,33 @@ M.ProjectConstants = {
 ---| "Arguments"
 ---| "Unit test bundle"
 ---| "Failure Message"
+---| "UI test bundle"
+---| "Device"
+---| "Test Plan Configuration"
+---| "Arguments"
+---| "Repetition"
+---| "Test Case Run"
+---| "Source Code Reference"
+---| "Attachment"
+---| "Expression"
+---| "Test Value"
 
 ---The result for a test node
----@alias TestNodeResult "Failed" | "Passed"
+---@alias TestNodeResult
+---| "Failed"
+---| "Passed"
+---| "Skipped"
+---| "Expected Failure"
+---| "unknown"
 
 ---A node for a runned test
 ---@class TestNode
 ---@field name string
 ---@field nodeType TestNodeType
----@field result TestNodeResult
+---@field result? TestNodeResult
 ---@field nodeIdentifier? string
 ---@field duration? string
----@field children TestNode[]?
+---@field details? string
+---@field children? TestNode[]
 
 return M
