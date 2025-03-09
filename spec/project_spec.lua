@@ -749,16 +749,30 @@ describe("neoxcd plugin", function()
           "result" : "Passed",
           "children" : [
             {
-              "name" : "Test",
+              "name" : "TestSuite",
               "nodeType" : "Test Suite",
               "result" : "Passed",
               "children" : [
                 {
                   "duration" : "0,025s",
-                  "name" : "testNavigation()",
-                  "nodeIdentifier" : "Test/testNavigation()",
+                  "name" : "test1()",
+                  "nodeIdentifier" : "TestSuite/test1()",
                   "nodeType" : "Test Case",
                   "result" : "Passed"
+                },
+                {
+                  "duration" : "0,027s",
+                  "name" : "test2()",
+                  "nodeIdentifier" : "TestSuite/test2()",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed",
+                  "children": [
+                    {
+                      "name" : "TestSuite.swift:43: Issue recorded: A state change does not match expectation: …\n\nFailure description\n\nMore text\n\nEven more",
+                      "nodeType" : "Failure Message",
+                      "result" : "Failed"
+                    }
+                  ]
                 }
               ]
             }
@@ -776,6 +790,7 @@ describe("neoxcd plugin", function()
    }
       ]]
       )
+      stub_external_cmd(0, { "fd", "^TestSuite.swift" }, "/cwd/TestSuite.swift\n")
 
       assert.are.same(project.ProjectResult.SUCCESS, project.run_tests())
       assert.are.same(
@@ -792,16 +807,30 @@ describe("neoxcd plugin", function()
                 result = "Passed",
                 children = {
                   {
-                    name = "Test",
+                    name = "TestSuite",
                     nodeType = "Test Suite",
                     result = "Passed",
                     children = {
                       {
                         duration = "0,025s",
-                        name = "testNavigation()",
-                        nodeIdentifier = "Test/testNavigation()",
+                        name = "test1()",
+                        nodeIdentifier = "TestSuite/test1()",
                         nodeType = "Test Case",
                         result = "Passed",
+                      },
+                      {
+                        duration = "0,027s",
+                        name = "test2()",
+                        nodeIdentifier = "TestSuite/test2()",
+                        nodeType = "Test Case",
+                        result = "Failed",
+                        children = {
+                          {
+                            name = "TestSuite.swift:43: Issue recorded: A state change does not match expectation: …\n\nFailure description\n\nMore text\n\nEven more",
+                            nodeType = "Failure Message",
+                            result = "Failed",
+                          },
+                        },
                       },
                     },
                   },
@@ -812,6 +841,15 @@ describe("neoxcd plugin", function()
         },
         project.current_project.test_results
       )
+      assert.are.same({
+        ---@type QuickfixEntry
+        {
+          filename = "/cwd/TestSuite.swift",
+          lnum = 43,
+          text = "Issue recorded: A state change does not match expectation: …\n\nFailure description\n\nMore text\n\nEven more",
+          type = "E",
+        },
+      }, project.current_project.quickfixes)
     end)
   end)
 

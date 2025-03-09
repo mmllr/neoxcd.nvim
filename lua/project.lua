@@ -566,6 +566,51 @@ function M.show_runner()
   vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
 
+---Gets all failure message nodes from the test results
+---@param nodes TestNode[]
+---@return TestNode[]
+local function find_failure_nodes(nodes)
+  local results = {}
+
+  for _, node in ipairs(nodes) do
+    if node.nodeType == "Failure Message" then
+      table.insert(results, node)
+    end
+    if node.children then
+      local child_results = find_failure_nodes(node.children)
+      for _, child_result in ipairs(child_results) do
+        table.insert(results, child_result)
+      end
+    end
+  end
+  return results
+end
+
+---Updates the quickfix list with the test results. It transforms all failure message nodes iunto quickfix entries
+---@async
+---@param tests TestNode[]
+---@return QuickfixEntry[]
+local function update_quickfix_list(tests)
+  local quickfix_list = {}
+  local failure_nodes = find_failure_nodes(tests)
+  for _, test in ipairs(failure_nodes) do
+    local filename, line, rest = test.name:match("([^:]+):(%d+):%s*(.+)")
+    if filename and line and rest then
+      local find_result = cmd({ "fd", "^" .. filename }, nil)
+      if find_result.code == 0 and find_result.stdout then
+        local entry = {
+          filename = string.gsub(find_result.stdout, "\n$", ""),
+          lnum = tonumber(line),
+          text = rest,
+          type = types.QuickfixEntryType.ERROR,
+        }
+        table.insert(quickfix_list, entry)
+      end
+    end
+  end
+  return quickfix_list
+end
+
 ---Runs the tests in the current project
 ---@async
 ---@return ProjectResultCode
@@ -616,6 +661,12 @@ function M.run_tests()
       return M.ProjectResult.INVALID_JSON
     end
     M.current_project.test_results = data.testNodes
+    local quickfixes = update_quickfix_list(data.testNodes)
+    if quickfixes and #quickfixes > 0 then
+      M.current_project.quickfixes = quickfixes
+      nio.scheduler()
+      vim.fn.setqflist(quickfixes, "r")
+    end
   end
   return result.code
 end
