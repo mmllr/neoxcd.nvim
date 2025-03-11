@@ -181,13 +181,15 @@ describe("neoxcd plugin", function()
 
     describe("Scheme selection", function()
       before_each(function()
+        vim.g.neoxcd_scheme = nil
         givenProject("project", "SchemeA", { "SchemeA", "SchemeB", "SchemeC" })
         stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" }, "")
       end)
 
-      it("will update the xcode build server", function()
+      it("will update the scheme in the project", function()
         assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
         assert.are.same("schemeB", project.current_project.scheme)
+        assert.are.same("schemeB", vim.g.neoxcd_scheme)
       end)
 
       it("will write the selected scheme to the neoxcd folder", function()
@@ -219,6 +221,10 @@ describe("neoxcd plugin", function()
   end)
 
   describe("Destination parsing", function()
+    before_each(function()
+      vim.g.neoxcd_destination = nil
+    end)
+
     it("Parsing output from xcodebuild -showdestinations", function()
       local output = [[
 
@@ -379,6 +385,7 @@ describe("neoxcd plugin", function()
   end)
 
   it("Can select a destination", function()
+    vim.g.neoxcd_destination = nil
     local output = [[
 
 
@@ -421,6 +428,7 @@ describe("neoxcd plugin", function()
       assert.are.same(d, project.current_project.destination)
       local saved = vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"])
       assert.are.same(d, saved.destination)
+      assert.are.same(util.format_destination(d), vim.g.neoxcd_destination)
     end
   end)
 
@@ -982,6 +990,8 @@ describe("neoxcd plugin", function()
             platform = "macOS",
           },
         }, project.destinations())
+        assert.are.same("SchemeA", vim.g.neoxcd_scheme)
+        assert.are.same(util.format_destination(project.current_project.destination), vim.g.neoxcd_destination)
       end)
     end)
   end)

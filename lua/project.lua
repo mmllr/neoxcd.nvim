@@ -158,6 +158,8 @@ local function load_project()
       schemes = decoded.schemes,
       tests = {},
     }
+    vim.g.neoxcd_scheme = decoded.scheme
+    vim.g.neoxcd_destination = util.format_destination(decoded.destination)
     return M.ProjectResult.SUCCESS
   end
   return M.ProjectResult.INVALID_JSON
@@ -287,12 +289,14 @@ function M.select_scheme(scheme)
   end
   if p.scheme == scheme or p.type == "package" then
     M.current_project.scheme = scheme
+    vim.g.neoxcd_scheme = scheme
     return M.ProjectResult.SUCCESS
   end
   local opts = M.build_options_for_project(p)
   local result = cmd(util.concat({ "xcode-build-server", "config", "-scheme", scheme }, opts), nil)
   if result.code == M.ProjectResult.SUCCESS then
     M.current_project.scheme = scheme
+    vim.g.neoxcd_scheme = scheme
   end
   save_project()
   return result.code
@@ -327,6 +331,7 @@ function M.select_destination(index)
     return
   end
   M.current_project.destination = destinations[M.current_project.scheme][index]
+  vim.g.neoxcd_destination = util.format_destination(M.current_project.destination)
   save_project()
 end
 
