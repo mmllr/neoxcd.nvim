@@ -7,6 +7,18 @@ describe("Test runner", function()
   local sut = require("runner")
   local nio = require("nio")
   local it = nio.tests.it
+
+  it("Parses test node identifiers", function()
+    local class_name, method_name = sut.get_class_and_method("Test/testSomething")
+
+    assert.equals("Test", class_name)
+    assert.equals("testSomething", method_name)
+
+    class_name, method_name = sut.get_class_and_method("Test/testSomething(value:)")
+    assert.equals("Test", class_name)
+    assert.equals("testSomething(value:)", method_name)
+  end)
+
   it("parses enumerated tests", function()
     ---@type TestEnumeration[]
     local results = {

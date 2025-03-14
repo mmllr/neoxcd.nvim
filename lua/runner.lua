@@ -13,7 +13,7 @@ local symbols = {
   ["Repetition"] = "",
 }
 
-local results = {
+local result_icons = {
   ["Passed"] = " []",
   ["Failed"] = " []",
 }
@@ -33,6 +33,28 @@ local included_node_types = {
   "UI test bundle",
 }
 
+---Gets all child nodes with a certain type
+---@param node TestNode
+---@param type TestNodeType
+---@return TestNode[]
+function M.children_with_type(node, type)
+  local results = {}
+
+  if node.nodeType == type then
+    table.insert(results, node)
+  end
+  for _, child in ipairs(node.children or {}) do
+    if child.nodeType == type then
+      table.insert(results, child)
+    end
+    local child_results = M.children_with_type(child, type)
+    for _, child_result in ipairs(child_results or {}) do
+      table.insert(results, child_result)
+    end
+  end
+  return results
+end
+
 ---Formats a test enumeration or a test node for display in the runner list
 ---@param item TestNode|TestEnumeration
 ---@param is_last boolean
@@ -42,7 +64,7 @@ local function format_item(item, is_last)
 
   local symbol = symbols[key] or "???"
   local connector = (is_last and "╰─" or "├─")
-  local result = item.result and results[item.result] or ""
+  local result = item.result and result_icons[item.result] or ""
   return connector .. symbol .. " " .. item.name .. result
 end
 
@@ -83,6 +105,13 @@ function M.format(items)
     end
   end
   return lines
+end
+
+---Extracts Test name and test method from a test node
+---@param nodeIdentifier string
+---@return string?, string?
+function M.get_class_and_method(nodeIdentifier)
+  return string.match(nodeIdentifier, "([^/]+)/(.+)")
 end
 
 return M

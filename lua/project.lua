@@ -39,6 +39,8 @@ M.ProjectResult = {
 
 ---@type DestinationCache
 local destinations = {}
+local diagnosticsNamespace = vim.api.nvim_create_namespace("neoxcd-diagnostics")
+local marksNamespace = vim.api.nvim_create_namespace("neoxcd-marks")
 
 local cmd = nio.wrap(util.run_job, 3)
 
@@ -574,17 +576,18 @@ end
 ---Gets all failure message nodes from the test results
 ---@param nodes TestNode[]
 ---@return TestNode[]
-local function find_failure_nodes(nodes)
+local function find_failure_message_nodes(nodes)
   local results = {}
 
   for _, node in ipairs(nodes) do
     if node.nodeType == "Failure Message" then
       table.insert(results, node)
-    end
-    if node.children then
-      local child_results = find_failure_nodes(node.children)
-      for _, child_result in ipairs(child_results) do
-        table.insert(results, child_result)
+    else
+      if node.children then
+        local child_results = find_failure_message_nodes(node.children)
+        for _, child_result in ipairs(child_results) do
+          table.insert(results, child_result)
+        end
       end
     end
   end
@@ -597,7 +600,7 @@ end
 ---@return QuickfixEntry[]
 local function update_quickfix_list(tests)
   local quickfix_list = {}
-  local failure_nodes = find_failure_nodes(tests)
+  local failure_nodes = find_failure_message_nodes(tests)
   for _, test in ipairs(failure_nodes) do
     local filename, line, rest = test.name:match("([^:]+):(%d+):%s*(.+)")
     if filename and line and rest then
@@ -674,6 +677,120 @@ function M.run_tests()
     end
   end
   return result.code
+end
+
+---Gets all test failure nodes from the test results
+---@param nodes TestNode[]
+---@return TestNode[]
+local function find_failed_nodes(nodes)
+  local results = {}
+
+  for _, node in ipairs(nodes) do
+    if node.nodeType == "Test Case" and node.result == "Failed" then
+      table.insert(results, node)
+    end
+    local child_results = find_failed_nodes(node.children or {})
+    for _, child_result in ipairs(child_results) do
+      table.insert(results, child_result)
+    end
+  end
+  return results
+end
+
+---Updates the diagnostics list with the test results
+---@param node TestNode
+---@param buf integer
+local function update_diagnostics_from_failure_message(node, buf)
+  if node.nodeType ~= "Failure Message" then
+    return
+  end
+  local diagnostics = {}
+  local filepath = nio.api.nvim_buf_get_name(buf)
+
+  local filename, line, message = string.match(node.name, "([^:]+):(%d+):%s*(.+)")
+  if not util.has_suffix(filepath, filename) then
+    return
+  end
+
+  table.insert(diagnostics, {
+    bufnr = buf,
+    lnum = line - 1,
+    col = 0,
+    severity = vim.diagnostic.severity.ERROR,
+    source = "Neoxcd",
+    message = message,
+    user_data = {},
+  })
+
+  vim.diagnostic.reset(diagnosticsNamespace, buf)
+  vim.api.nvim_buf_clear_namespace(buf, diagnosticsNamespace, 0, -1)
+  vim.diagnostic.set(diagnosticsNamespace, buf, diagnostics, {})
+end
+
+---Updates the diagnostics in the test names
+---async
+---@param node TestNode
+---@param buf integer
+local function update_diagnostics_for_tests(node, buf)
+  local class_name, method_name = runner.get_class_and_method(node.nodeIdentifier)
+  if class_name == nil or method_name == nil then
+    return
+  end
+  local params = { textDocument = vim.lsp.util.make_text_document_params() }
+
+  vim.lsp.buf_request(0, "textDocument/documentSymbol", params, function(err, result, ctx, config)
+    if err or not result then
+      return
+    end
+
+    local function find_class(symbols)
+      for _, symbol in ipairs(symbols) do
+        if symbol.name == class_name and symbol.kind == 5 or symbol.kind == 23 then -- '5' = Class
+          return symbol
+        end
+      end
+    end
+
+    -- Find the method inside the class
+    local function find_method(class_symbol)
+      if not class_symbol.children then
+        return
+      end
+      for _, symbol in ipairs(class_symbol.children) do
+        if symbol.name == method_name and symbol.kind == 6 then -- '6' = Method
+          vim.api.nvim_buf_set_extmark(buf, marksNamespace, symbol.range.start.line + 1, 0, {
+            virt_text = { { node.duration or "Failure", "DiagnosticVirtualTextError" } },
+            sign_text = "",
+            sign_hl_group = "DiagnosticSignError",
+          })
+        end
+      end
+    end
+
+    -- Search for the class first, then look for the method inside it
+    local class_symbol = find_class(result)
+    if class_symbol then
+      find_method(class_symbol)
+    end
+  end)
+end
+
+---Updates a buffer with test results
+---@async
+---@param buf integer
+M.update_test_results = function(buf)
+  local results = M.current_project.test_results
+  if results == nil or #results == 0 then
+    return
+  end
+  local failure_nodes = find_failed_nodes(results)
+  for _, node in pairs(failure_nodes) do
+    update_diagnostics_for_tests(node, buf)
+    local children = runner.children_with_type(node, "Failure Message")
+    for _, child in ipairs(children) do
+      update_diagnostics_from_failure_message(child, buf)
+    end
+  end
 end
 
 return M

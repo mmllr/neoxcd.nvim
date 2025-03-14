@@ -245,4 +245,8 @@ function M.find_first(list, predicate)
   return nil
 end
 
+function M.has_suffix(str, suffix)
+  return str:sub(-#suffix) == suffix
+end
+
 return M

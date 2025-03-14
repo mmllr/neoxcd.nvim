@@ -3,6 +3,7 @@ local nio = require("nio")
 local project = require("project")
 local util = require("util")
 local xcode = require("xcode")
+local runner = require("runner")
 
 local function show_ui(schemes, opts, callback)
   vim.ui.select(schemes, opts, callback)
@@ -127,11 +128,23 @@ end
 ---@field open_in_xcode fun()
 ---@field debug fun()
 ---@field stop fun()
----@dield scan fun()
+---@field scan fun()
 
 ---@type Neoxcd
 return {
   setup = function(options)
+    local group = vim.api.nvim_create_augroup("neoxcd.nvim", { clear = true })
+    vim.api.nvim_create_autocmd({ "BufReadPost" }, {
+      group = group,
+      pattern = "*.swift",
+      callback = function(ev)
+        if project.current_project.test_results then
+          nio.run(function()
+            project.update_test_results(ev.buf)
+          end)
+        end
+      end,
+    })
     nio.run(function()
       project.load()
     end)
