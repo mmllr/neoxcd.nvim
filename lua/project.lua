@@ -736,43 +736,53 @@ local function update_diagnostics_for_tests(node, buf)
   if class_name == nil or method_name == nil then
     return
   end
-  local params = { textDocument = vim.lsp.util.make_text_document_params() }
 
-  vim.lsp.buf_request(0, "textDocument/documentSymbol", params, function(err, result, ctx, config)
-    if err or not result then
+  local lsp = nio.lsp
+  local client = lsp.get_clients({ name = "sourcekit", bufnr = buf })[1]
+  if client == nil then
+    return
+  end
+
+  local err, response = client.request.textDocument_documentSymbol({ textDocument = { uri = vim.uri_from_bufnr(buf) } }, buf)
+  if err or response == nil then
+    return
+  end
+
+  local function find_class(symbols)
+    for _, symbol in ipairs(symbols) do
+      if symbol.name == class_name and symbol.kind == 5 or symbol.kind == 23 then -- '5' = Class
+        nio.api.nvim_buf_set_extmark(buf, marksNamespace, symbol.range.start.line, 0, {
+          virt_text = { { node.duration or "Failure", "DiagnosticVirtualTextError" } },
+          sign_text = "",
+          sign_hl_group = "DiagnosticSignError",
+        })
+        return symbol
+      end
+    end
+  end
+
+  -- Find the method inside the class
+  local function find_method(class_symbol)
+    if not class_symbol.children then
       return
     end
-
-    local function find_class(symbols)
-      for _, symbol in ipairs(symbols) do
-        if symbol.name == class_name and symbol.kind == 5 or symbol.kind == 23 then -- '5' = Class
-          return symbol
-        end
+    for _, symbol in ipairs(class_symbol.children) do
+      --https://github.com/swiftlang/sourcekit-lsp/blob/main/Sources/LanguageServerProtocol/SupportTypes/SymbolKind.swift
+      if symbol.name == method_name and symbol.kind == 6 then -- '6' = Method
+        nio.api.nvim_buf_set_extmark(buf, marksNamespace, symbol.range.start.line + 1, 0, {
+          virt_text = { { node.duration or "Failure", "DiagnosticVirtualTextError" } },
+          sign_text = "",
+          sign_hl_group = "DiagnosticSignError",
+        })
       end
     end
+  end
 
-    -- Find the method inside the class
-    local function find_method(class_symbol)
-      if not class_symbol.children then
-        return
-      end
-      for _, symbol in ipairs(class_symbol.children) do
-        if symbol.name == method_name and symbol.kind == 6 then -- '6' = Method
-          vim.api.nvim_buf_set_extmark(buf, marksNamespace, symbol.range.start.line + 1, 0, {
-            virt_text = { { node.duration or "Failure", "DiagnosticVirtualTextError" } },
-            sign_text = "",
-            sign_hl_group = "DiagnosticSignError",
-          })
-        end
-      end
-    end
-
-    -- Search for the class first, then look for the method inside it
-    local class_symbol = find_class(result)
-    if class_symbol then
-      find_method(class_symbol)
-    end
-  end)
+  -- Search for the class first, then look for the method inside it
+  local class_symbol = find_class(response)
+  if class_symbol then
+    find_method(class_symbol)
+  end
 end
 
 ---Updates a buffer with test results
