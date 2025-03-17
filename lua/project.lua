@@ -724,7 +724,10 @@ local function update_diagnostics_from_failure_message(node, buf)
 
   vim.diagnostic.reset(diagnosticsNamespace, buf)
   vim.api.nvim_buf_clear_namespace(buf, diagnosticsNamespace, 0, -1)
-  vim.diagnostic.set(diagnosticsNamespace, buf, diagnostics, {})
+  vim.diagnostic.set(diagnosticsNamespace, buf, diagnostics, {
+    virtual_lines = true,
+    virtual_text = false,
+  })
 end
 
 ---Updates the diagnostics in the test names
