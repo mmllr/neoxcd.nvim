@@ -40,7 +40,6 @@ M.ProjectResult = {
 ---@type DestinationCache
 local destinations = {}
 local diagnosticsNamespace = vim.api.nvim_create_namespace("neoxcd-diagnostics")
-local marksNamespace = vim.api.nvim_create_namespace("neoxcd-marks")
 
 local cmd = nio.wrap(util.run_job, 3)
 
@@ -754,7 +753,7 @@ local function update_diagnostics_for_tests(node, buf)
   local function find_class(symbols)
     for _, symbol in ipairs(symbols) do
       if symbol.name == class_name and symbol.kind == 5 or symbol.kind == 23 then -- '5' = Class
-        nio.api.nvim_buf_set_extmark(buf, marksNamespace, symbol.range.start.line, 0, {
+        nio.api.nvim_buf_set_extmark(buf, diagnosticsNamespace, symbol.range.start.line, 0, {
           virt_text = { { node.duration or "Failure", "DiagnosticVirtualTextError" } },
           sign_text = "",
           sign_hl_group = "DiagnosticSignError",
