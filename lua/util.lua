@@ -136,13 +136,6 @@ function M.format_destination(destination)
   return table.concat(parts, " ")
 end
 
-local function quote_if_needed(str)
-  if str:match("%s") then -- Check if the string contains whitespace
-    return '"' .. str .. '"'
-  end
-  return str
-end
-
 ---Remove n components from the end of a path
 ---@param path string
 ---@param n number
