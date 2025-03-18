@@ -33,6 +33,12 @@ local included_node_types = {
   "UI test bundle",
 }
 
+---A diagnostic message
+---@class TestDiagnostic
+---@field message string[]
+---@field line number
+---@field severity vim.diagnostic.severity
+
 ---Gets all child nodes with a certain type
 ---@param node TestNode
 ---@param type TestNodeType
@@ -112,6 +118,72 @@ end
 ---@return string?, string?
 function M.get_class_and_method(nodeIdentifier)
   return string.match(nodeIdentifier, "([^/]+)/(.+)")
+end
+
+---Finds a node with a prediate
+---@param nodes TestNode[]
+---@param predicate fun(node: TestNode): boolean
+---@return TestNode|nil
+local function find_node_with_predicate(nodes, predicate)
+  for _, node in pairs(nodes) do
+    if predicate(node) then
+      return node
+    end
+    if node.children then
+      local result = find_node_with_predicate(node.children, predicate)
+      if result then
+        return result
+      end
+    end
+  end
+  return nil
+end
+
+---Returns all diagnposics for tests in a buffer
+---@async
+---@param buf integer
+---@param nodes TestNode[]
+---@return TestDiagnostic[]|nil
+function M.diagnostics_for_tests_in_buffer(buf, nodes)
+  local lsp = require("lsp")
+  local document_symbols = lsp.document_symbol(buf)
+  if not document_symbols then
+    return nil
+  end
+  local suites = vim.tbl_filter(function(s)
+    return s.kind == 5 or s.kind == 23
+  end, document_symbols)
+  local diagnostics = {}
+
+  for _, suite in pairs(suites) do
+    local node = find_node_with_predicate(nodes, function(n)
+      return n.name == suite.name
+    end)
+    if node then
+      table.insert(diagnostics, {
+        message = node.duration,
+        severity = vim.diagnostic.severity.ERROR,
+        line = suite.range.start.line,
+      })
+
+      for _, test in ipairs(suite.children or {}) do
+        if test.kind == 6 then
+          local test_node = find_node_with_predicate(node.children or {}, function(n)
+            return n.nodeIdentifier == suite.name .. "/" .. test.name
+          end)
+          if test_node then
+            table.insert(diagnostics, {
+              message = test_node.duration,
+              severity = vim.diagnostic.severity.ERROR,
+              line = test.range.start.line,
+            })
+          end
+        end
+      end
+    end
+  end
+
+  return diagnostics
 end
 
 return M

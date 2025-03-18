@@ -7,6 +7,7 @@ describe("Test runner", function()
   local sut = require("runner")
   local nio = require("nio")
   local it = nio.tests.it
+  local lsp = require("lsp")
 
   it("Parses test node identifiers", function()
     local class_name, method_name = sut.get_class_and_method("Test/testSomething")
@@ -159,6 +160,7 @@ describe("Test runner", function()
                 name = "Test",
                 nodeType = "Test Suite",
                 result = "Failed",
+                duration = "42s",
                 children = {
                   {
                     duration = "1.234s",
@@ -188,5 +190,85 @@ describe("Test runner", function()
       "    ╰─╮󰅩 Test []",
       "      ╰─ testSomething() []",
     }, sut.format(results))
+  end)
+
+  it("updates diagnostics", function()
+    ---@type TestNode[]
+    local results = {
+      {
+        name = "Plan",
+        nodeType = "Test Plan",
+        result = "Passed",
+        children = {
+          {
+            name = "Test target",
+            nodeType = "Unit test bundle",
+            result = "Passed",
+            children = {
+              {
+                name = "Test",
+                nodeType = "Test Suite",
+                result = "Failed",
+                duration = "42s",
+                children = {
+                  {
+                    duration = "1.234s",
+                    name = "testSomething()",
+                    nodeIdentifier = "Test/testSomething()",
+                    nodeType = "Test Case",
+                    result = "Failed",
+                    children = {
+                      {
+                        name = "TestSuite.swift:41: Issue recorded: A state change does not match expectation: …\n\n      State(\n        _selection: .someState,\n\n(Expected: −, Actual: +)",
+                        nodeType = "Failure Message",
+                        result = "Failed",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    ---@type table<integer, lsp.types.Symbol[]>
+    local stubbed_symbols = {
+      [42] = {
+        {
+          name = "Test",
+          kind = 5,
+          range = { start = { line = 0, character = 0 }, ["end"] = { line = 3, character = 5 } },
+          children = {
+            {
+              name = "testSomething()",
+              kind = 6,
+              range = { start = { line = 40, character = 0 }, ["end"] = { line = 40, character = 5 } },
+            },
+          },
+        },
+      },
+    }
+
+    ---@diagnostic disable-next-line: duplicate-set-field
+    lsp.document_symbol = function(buf)
+      return stubbed_symbols[buf]
+    end
+
+    local diagnostics = sut.diagnostics_for_tests_in_buffer(42, results)
+
+    assert.are.same({
+      ---@type TestDiagnostic
+      {
+        message = "42s",
+        severity = vim.diagnostic.severity.ERROR,
+        line = 0,
+      },
+      {
+        message = "1.234s",
+        severity = vim.diagnostic.severity.ERROR,
+        line = 40,
+      },
+    }, diagnostics)
   end)
 end)
