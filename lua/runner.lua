@@ -1,4 +1,5 @@
 local M = {}
+
 ---@type table<string, string>
 local symbols = {
   plan = "╮󰙨",
@@ -33,11 +34,15 @@ local included_node_types = {
   "UI test bundle",
 }
 
+---The kind of a test diagnostic
+---@alias DiagnosticKind "symbol"|"failure"
+
 ---A diagnostic message
 ---@class TestDiagnostic
----@field message string[]
+---@field kind DiagnosticKind
+---@field message string
 ---@field line number
----@field severity vim.diagnostic.severity
+---@field severity vim.diagnostic.Severity
 
 ---Gets all child nodes with a certain type
 ---@param node TestNode
@@ -139,6 +144,38 @@ local function find_node_with_predicate(nodes, predicate)
   return nil
 end
 
+---Finds a node with a prediate
+---@param nodes TestNode[]
+---@param predicate fun(node: TestNode): boolean
+---@return TestNode[]
+local function find_nodes_with_predicate(nodes, predicate)
+  local results = {}
+  for _, node in pairs(nodes) do
+    if predicate(node) then
+      table.insert(results, node)
+    end
+    if node.children then
+      local result = find_nodes_with_predicate(node.children, predicate)
+      if result then
+        for _, r in ipairs(result) do
+          table.insert(results, r)
+        end
+      end
+    end
+  end
+  return results
+end
+
+---Returns the severty for a test result
+---@param result TestNodeResult
+---@return vim.diagnostic.Severity
+local function severity_for_result(result)
+  if result == "Failed" then
+    return vim.diagnostic.severity.ERROR
+  end
+  return vim.diagnostic.severity.INFO
+end
+
 ---Returns all diagnposics for tests in a buffer
 ---@async
 ---@param buf integer
@@ -161,8 +198,9 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
     end)
     if node then
       table.insert(diagnostics, {
-        message = node.duration,
-        severity = vim.diagnostic.severity.ERROR,
+        kind = "symbol",
+        message = node.duration or "",
+        severity = severity_for_result(node.result),
         line = suite.range.start.line,
       })
 
@@ -173,10 +211,24 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
           end)
           if test_node then
             table.insert(diagnostics, {
+              kind = "symbol",
               message = test_node.duration,
-              severity = vim.diagnostic.severity.ERROR,
+              severity = severity_for_result(test_node.result),
               line = test.range.start.line,
             })
+
+            local failures = find_nodes_with_predicate(test_node.children or {}, function(n)
+              return n.nodeType == "Failure Message"
+            end)
+            for _, failure in ipairs(failures) do
+              local _, line, message = string.match(failure.name, "([^:]+):(%d+):%s*(.+)")
+              table.insert(diagnostics, {
+                kind = "failure",
+                message = message,
+                severity = vim.diagnostic.severity.ERROR,
+                line = tonumber(line) - 1,
+              })
+            end
           end
         end
       end

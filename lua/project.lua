@@ -678,130 +678,46 @@ function M.run_tests()
   return result.code
 end
 
----Gets all test failure nodes from the test results
----@param nodes TestNode[]
----@return TestNode[]
-local function find_failed_nodes(nodes)
-  local results = {}
-
-  for _, node in ipairs(nodes) do
-    if node.nodeType == "Test Case" and node.result == "Failed" then
-      table.insert(results, node)
-    end
-    local child_results = find_failed_nodes(node.children or {})
-    for _, child_result in ipairs(child_results) do
-      table.insert(results, child_result)
-    end
-  end
-  return results
-end
-
----Updates the diagnostics list with the test results
----@param node TestNode
 ---@param buf integer
-local function update_diagnostics_from_failure_message(node, buf)
-  if node.nodeType ~= "Failure Message" then
-    return
-  end
-  local diagnostics = {}
-  local filepath = nio.api.nvim_buf_get_name(buf)
-
-  local filename, line, message = string.match(node.name, "([^:]+):(%d+):%s*(.+)")
-  if not util.has_suffix(filepath, filename) then
-    return
-  end
-
-  table.insert(diagnostics, {
-    bufnr = buf,
-    lnum = line - 1,
-    col = 0,
-    severity = vim.diagnostic.severity.ERROR,
-    source = "Neoxcd",
-    message = message,
-    user_data = {},
-  })
-
-  vim.diagnostic.reset(diagnosticsNamespace, buf)
-  vim.api.nvim_buf_clear_namespace(buf, diagnosticsNamespace, 0, -1)
-  vim.diagnostic.set(diagnosticsNamespace, buf, diagnostics, {
-    virtual_lines = true,
-    virtual_text = false,
-  })
-end
-
----Updates the diagnostics in the test names
----async
----@param node TestNode
----@param buf integer
-local function update_diagnostics_for_tests(node, buf)
-  local class_name, method_name = runner.get_class_and_method(node.nodeIdentifier)
-  if class_name == nil or method_name == nil then
-    return
-  end
-
-  local lsp = nio.lsp
-  local client = lsp.get_clients({ name = "sourcekit", bufnr = buf })[1]
-  if client == nil then
-    return
-  end
-
-  local err, response = client.request.textDocument_documentSymbol({ textDocument = { uri = vim.uri_from_bufnr(buf) } }, buf)
-  if err or response == nil then
-    return
-  end
-
-  local function find_class(symbols)
-    for _, symbol in ipairs(symbols) do
-      if symbol.name == class_name and symbol.kind == 5 or symbol.kind == 23 then -- '5' = Class
-        nio.api.nvim_buf_set_extmark(buf, diagnosticsNamespace, symbol.range.start.line, 0, {
-          virt_text = { { node.duration or "Failure", "DiagnosticVirtualTextError" } },
-          sign_text = "",
-          sign_hl_group = "DiagnosticSignError",
-        })
-        return symbol
-      end
-    end
-  end
-
-  -- Find the method inside the class
-  local function find_method(class_symbol)
-    if not class_symbol.children then
-      return
-    end
-    for _, symbol in ipairs(class_symbol.children) do
-      --https://github.com/swiftlang/sourcekit-lsp/blob/main/Sources/LanguageServerProtocol/SupportTypes/SymbolKind.swift
-      if symbol.name == method_name and symbol.kind == 6 then -- '6' = Method
-        nio.api.nvim_buf_set_extmark(buf, marksNamespace, symbol.range.start.line + 1, 0, {
-          virt_text = { { node.duration or "Failure", "DiagnosticVirtualTextError" } },
-          sign_text = "",
-          sign_hl_group = "DiagnosticSignError",
-        })
-      end
-    end
-  end
-
-  -- Search for the class first, then look for the method inside it
-  local class_symbol = find_class(response)
-  if class_symbol then
-    find_method(class_symbol)
+---@param diag TestDiagnostic
+local function add_diagnostic_to_buffer(buf, diag)
+  if diag.kind == "failure" then
+    vim.diagnostic.set(diagnosticsNamespace, buf, {
+      {
+        lnum = diag.line,
+        col = 0,
+        severity = diag.severity,
+        source = "Neoxcd",
+        message = diag.message,
+        user_data = {},
+      },
+    }, {
+      virtual_lines = true,
+      virtual_text = false,
+    })
+  elseif diag.kind == "symbol" then
+    nio.api.nvim_buf_set_extmark(buf, diagnosticsNamespace, diag.line, 0, {
+      virt_text = {
+        { diag.message, diag.severity == vim.diagnostic.severity.ERROR and "DiagnosticVirtualTextError" or "DiagnosticVirtualTextOk" },
+      },
+      sign_text = diag.severity == vim.diagnostic.severity.ERROR and "" or "✓",
+      sign_hl_group = diag.severity == vim.diagnostic.severity.ERROR and "DiagnosticSignError" or "DiagnosticSignOk",
+    })
   end
 end
 
 ---Updates a buffer with test results
----@async
----@param buf integer
+---@async @param buf integer
 M.update_test_results = function(buf)
   local results = M.current_project.test_results
   if results == nil or #results == 0 then
     return
   end
-  local failure_nodes = find_failed_nodes(results)
-  for _, node in pairs(failure_nodes) do
-    update_diagnostics_for_tests(node, buf)
-    local children = runner.children_with_type(node, "Failure Message")
-    for _, child in ipairs(children) do
-      update_diagnostics_from_failure_message(child, buf)
-    end
+  local diags = runner.diagnostics_for_tests_in_buffer(buf, results)
+  vim.diagnostic.reset(diagnosticsNamespace, buf)
+  vim.api.nvim_buf_clear_namespace(buf, diagnosticsNamespace, 0, -1)
+  for _, diag in ipairs(diags or {}) do
+    add_diagnostic_to_buffer(buf, diag)
   end
 end
 

@@ -1,3 +1,5 @@
+local nio = require("nio")
+
 local M = {}
 
 ---@class lsp.types
@@ -24,7 +26,17 @@ M.types = {}
 ---@param buf integer
 ---@return lsp.types.Symbol[]|nil
 function M.document_symbol(buf)
-  return nil
+  local lsp = nio.lsp
+  local client = lsp.get_clients({ name = "sourcekit", bufnr = buf })[1]
+  if client == nil then
+    return nil
+  end
+
+  local err, response = client.request.textDocument_documentSymbol({ textDocument = { uri = vim.uri_from_bufnr(buf) } }, buf)
+  if err or response == nil then
+    return
+  end
+  return response
 end
 
 return M

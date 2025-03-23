@@ -225,6 +225,13 @@ describe("Test runner", function()
                       },
                     },
                   },
+                  {
+                    duration = "0.815s",
+                    name = "testAnotherThing()",
+                    nodeIdentifier = "Test/testAnotherThing()",
+                    result = "Passed",
+                    nodeType = "Test Case",
+                  },
                 },
               },
             },
@@ -243,7 +250,12 @@ describe("Test runner", function()
             {
               name = "testSomething()",
               kind = 6,
-              range = { start = { line = 40, character = 0 }, ["end"] = { line = 40, character = 5 } },
+              range = { start = { line = 30, character = 0 }, ["end"] = { line = 40, character = 5 } },
+            },
+            {
+              name = "testAnotherThing()",
+              kind = 6,
+              range = { start = { line = 50, character = 0 }, ["end"] = { line = 60, character = 5 } },
             },
           },
         },
@@ -257,18 +269,33 @@ describe("Test runner", function()
 
     local diagnostics = sut.diagnostics_for_tests_in_buffer(42, results)
 
-    assert.are.same({
-      ---@type TestDiagnostic
+    ---@type TestDiagnostic[]
+    local expected = {
       {
+        kind = "symbol",
         message = "42s",
         severity = vim.diagnostic.severity.ERROR,
         line = 0,
       },
       {
+        kind = "symbol",
         message = "1.234s",
+        severity = vim.diagnostic.severity.ERROR,
+        line = 30,
+      },
+      {
+        kind = "failure",
+        message = "Issue recorded: A state change does not match expectation: …\n\n      State(\n        _selection: .someState,\n\n(Expected: −, Actual: +)",
         severity = vim.diagnostic.severity.ERROR,
         line = 40,
       },
-    }, diagnostics)
+      {
+        kind = "symbol",
+        message = "0.815s",
+        severity = vim.diagnostic.severity.INFO,
+        line = 50,
+      },
+    }
+    assert.are.same(expected, diagnostics)
   end)
 end)
