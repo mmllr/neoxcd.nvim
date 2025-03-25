@@ -734,68 +734,68 @@ describe("neoxcd plugin", function()
           "--compact",
         },
         [[
-      {
-  "devices" : [
-    {
-      "architecture" : "arm64",
-      "deviceId" : "9D4089D2-83A1-4AAA-B2C1-F87C702BD7BE",
-      "deviceName" : "iPhone 16 Pro",
-      "modelName" : "iPhone 16 Pro",
-      "osVersion" : "18.2",
-      "platform" : "iOS Simulator"
-    }
-  ],
-  "testNodes" : [
-  {
-      "name" : "My Plan",
-      "nodeType" : "Test Plan",
-      "result" : "Failed",
-      "children": [
-         {
-          "name" : "FeatureTests",
-          "nodeType" : "Unit test bundle",
-          "result" : "Passed",
-          "children" : [
-            {
-              "name" : "TestSuite",
-              "nodeType" : "Test Suite",
-              "result" : "Passed",
-              "children" : [
-                {
-                  "duration" : "0,025s",
-                  "name" : "test1()",
-                  "nodeIdentifier" : "TestSuite/test1()",
-                  "nodeType" : "Test Case",
-                  "result" : "Passed"
-                },
-                {
-                  "duration" : "0,027s",
-                  "name" : "test2()",
-                  "nodeIdentifier" : "TestSuite/test2()",
-                  "nodeType" : "Test Case",
-                  "result" : "Failed",
-                  "children": [
-                    {
-                      "name" : "TestSuite.swift:43: Issue recorded: A state change does not match expectation: …\n\nFailure description\n\nMore text\n\nEven more",
-                      "nodeType" : "Failure Message",
-                      "result" : "Failed"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-   ],
-  "testPlanConfigurations" : [
-    {
-      "configurationId" : "1",
-      "configurationName" : "Configuration 1"
-    }
-  ]
-   }
+        {
+        "devices" : [
+          {
+            "architecture" : "arm64",
+            "deviceId" : "9D4089D2-83A1-4AAA-B2C1-F87C702BD7BE",
+            "deviceName" : "iPhone 16 Pro",
+            "modelName" : "iPhone 16 Pro",
+            "osVersion" : "18.2",
+            "platform" : "iOS Simulator"
+          }
+        ],
+        "testNodes" : [
+        {
+            "name" : "My Plan",
+            "nodeType" : "Test Plan",
+            "result" : "Failed",
+            "children": [
+              {
+                "name" : "FeatureTests",
+                "nodeType" : "Unit test bundle",
+                "result" : "Passed",
+                "children" : [
+                  {
+                    "name" : "TestSuite",
+                    "nodeType" : "Test Suite",
+                    "result" : "Passed",
+                    "children" : [
+                      {
+                        "duration" : "0,025s",
+                        "name" : "test1()",
+                        "nodeIdentifier" : "TestSuite/test1()",
+                        "nodeType" : "Test Case",
+                        "result" : "Passed"
+                      },
+                      {
+                        "duration" : "0,027s",
+                        "name" : "test2()",
+                        "nodeIdentifier" : "TestSuite/test2()",
+                        "nodeType" : "Test Case",
+                        "result" : "Failed",
+                        "children": [
+                          {
+                            "name" : "TestSuite.swift:43: Issue recorded: A state change does not match expectation: …\n\nFailure description\n\nMore text\n\nEven more",
+                            "nodeType" : "Failure Message",
+                            "result" : "Failed"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "testPlanConfigurations" : [
+          {
+            "configurationId" : "1",
+            "configurationName" : "Configuration 1"
+          }
+        ]
+      }
       ]]
       )
       stub_external_cmd(0, { "fd", "^TestSuite.swift" }, "/cwd/TestSuite.swift\n")
@@ -855,6 +855,79 @@ describe("neoxcd plugin", function()
           filename = "/cwd/TestSuite.swift",
           lnum = 43,
           text = "Issue recorded: A state change does not match expectation: …\n\nFailure description\n\nMore text\n\nEven more",
+          type = "E",
+        },
+      }, project.current_project.quickfixes)
+    end)
+
+    it("Adds build failure messages to the quickfixes", function()
+      stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/tests.xcresult" }, "")
+      stub_external_cmd(-1, {
+        "xcodebuild",
+        "test",
+        "-scheme",
+        "testScheme",
+        "-destination",
+        "id=deadbeef-deadbeefdeadbeef",
+        "-resultBundlePath",
+        "/cwd/.neoxcd/tests.xcresult",
+        "-project",
+        "project.xcodeproj",
+      }, "")
+      stub_external_cmd(
+        0,
+        {
+          "xcrun",
+          "xcresulttool",
+          "get",
+          "build-results",
+          "--path",
+          "/cwd/.neoxcd/tests.xcresult",
+          "--compact",
+        },
+        [[
+{
+  "actionTitle" : "Testing workspace ProjectName with scheme testScheme",
+  "analyzerWarningCount" : 0,
+  "analyzerWarnings" : [
+
+  ],
+  "destination" : {
+    "architecture" : "arm64e",
+    "deviceId" : "00001234-000DEADBEEF40010",
+    "deviceName" : "My Mac",
+    "modelName" : "iMac Bondy blue",
+    "osVersion" : "15.3.2",
+    "platform" : "macOS"
+  },
+  "endTime" : 1742936963.491,
+  "errorCount" : 1,
+  "errors" : [
+    {
+      "className" : "DVTTextDocumentLocation",
+      "issueType" : "Swift Compiler Error",
+      "message" : "'s' is not a valid digit in integer literal",
+      "sourceURL" : "file:///Users/user/Tests/ProjectTests/ProjectTests.swift#EndingColumnNumber=9&EndingLineNumber=22&StartingColumnNumber=9&StartingLineNumber=22&Timestamp=764629760.921448"
+    }
+  ],
+  "startTime" : 1742936960.783,
+  "status" : "failed",
+  "warningCount" : 0,
+  "warnings" : [
+
+  ]
+}
+      ]]
+      )
+
+      assert.are.same(-1, project.run_tests())
+      assert.are.same({
+        ---@type QuickfixEntry
+        {
+          filename = "/Users/user/Tests/ProjectTests/ProjectTests.swift",
+          lnum = 23,
+          col = 9,
+          text = "'s' is not a valid digit in integer literal",
           type = "E",
         },
       }, project.current_project.quickfixes)

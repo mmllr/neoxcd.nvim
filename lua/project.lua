@@ -6,6 +6,12 @@ local runner = require("runner")
 
 local M = {}
 
+---Build issue class
+---@class BuildIssue
+---@field issueType string
+---@field message string
+---@field sourceURL? string
+
 ---Result code enum
 ---@alias ProjectResultCode integer
 
@@ -618,6 +624,37 @@ local function update_quickfix_list(tests)
   return quickfix_list
 end
 
+---Updates the quickfix list with the build errors
+---@param issues BuildIssue[]
+---@return QuickfixEntry[]
+local function update_quickfix_list_from_build_issues(issues)
+  local quickfix_list = {}
+
+  local function parse_source_url(url)
+    local file = url:match("file://([^#]+)")
+    local start_column = url:match("StartingColumnNumber=(%d+)")
+    local start_line = url:match("StartingLineNumber=(%d+)")
+    return file, tonumber(start_column), tonumber(start_line)
+  end
+
+  for _, issue in ipairs(issues) do
+    if issue.sourceURL then
+      local file, start_column, start_line = parse_source_url(issue.sourceURL)
+      if file and start_column and start_line then
+        local entry = {
+          filename = file,
+          lnum = start_line + 1,
+          col = start_column,
+          text = issue.message,
+          type = types.QuickfixEntryType.ERROR,
+        }
+        table.insert(quickfix_list, entry)
+      end
+    end
+  end
+  return quickfix_list
+end
+
 ---Runs the tests in the current project
 ---@async
 ---@return ProjectResultCode
@@ -630,6 +667,7 @@ function M.run_tests()
     return M.ProjectResult.NO_SCHEME
   end
 
+  vim.fn.setqflist({}, "r")
   nio.scheduler()
   local results_path = util.get_cwd() .. "/.neoxcd/tests.xcresult"
   cmd({ "rm", "-rf", results_path }, nil)
@@ -647,6 +685,28 @@ function M.run_tests()
     }, opts),
     nil
   )
+
+  if result.code ~= 0 then
+    local build_results = cmd({ "xcrun", "xcresulttool", "get", "build-results", "--path", results_path, "--compact" }, nil)
+    if build_results.code == 0 and build_results.stdout then
+      local data = vim.json.decode(build_results.stdout, {
+        luanil = {
+          object = true,
+          array = true,
+        },
+      })
+      if data == nil or data.errors == nil then
+        return M.ProjectResult.INVALID_JSON
+      end
+      local quickfixes = update_quickfix_list_from_build_issues(data.errors)
+      if quickfixes and #quickfixes > 0 then
+        M.current_project.quickfixes = quickfixes
+        nio.scheduler()
+        vim.fn.setqflist(quickfixes, "r")
+      end
+    end
+    return result.code
+  end
   local test_result = cmd({
     "xcrun",
     "xcresulttool",
