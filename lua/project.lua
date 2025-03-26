@@ -703,9 +703,9 @@ function M.run_tests()
         M.current_project.quickfixes = quickfixes
         nio.scheduler()
         vim.fn.setqflist(quickfixes, "r")
+        return result.code
       end
     end
-    return result.code
   end
   local test_result = cmd({
     "xcrun",
