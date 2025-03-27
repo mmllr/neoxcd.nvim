@@ -568,14 +568,8 @@ function M.discover_tests()
 end
 
 function M.show_runner()
-  vim.cmd("botright 42vsplit Test Explorer")
-  local buf = vim.api.nvim_get_current_buf()
-  vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
-
   local results = M.current_project.test_results or M.current_project.tests
-  local lines = results and #results > 0 and runner.format(results) or { "No tests found" }
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+  runner.show(results)
 end
 
 ---Gets all failure message nodes from the test results

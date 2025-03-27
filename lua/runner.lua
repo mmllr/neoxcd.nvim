@@ -1,3 +1,7 @@
+local NuiTree = require("nui.tree")
+local Split = require("nui.split")
+local NuiLine = require("nui.line")
+
 local M = {}
 
 ---@type table<string, string>
@@ -236,6 +240,192 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
   end
 
   return diagnostics
+end
+
+local split = Split({
+  relative = "editor",
+  size = "20%",
+  position = "right",
+})
+
+---@param node TestNode|TestEnumeration
+---@return boolean
+local function is_in_tree(node)
+  if node.nodeType and node.nodeType == "Failure Message" then
+    return false
+  else
+    return true
+  end
+end
+
+---@param node TestNode|TestEnumeration
+---@return string
+local function id_for_node(node)
+  if node.nodeType and node.nodeType == "Repetition" then
+    return node.name
+  else
+    return node.nodeIdentifier or node.name
+  end
+end
+
+---Creates a NuiTeee.Node from a TestNode|TestEnumeration
+---@param item TestNode|TestEnumeration
+---@param parentID string
+---@return NuiTree.Node|nil
+local function create_tree_node(item, parentID)
+  local id = parentID .. "/" .. id_for_node(item)
+
+  local result = {}
+  for _, child in ipairs(item.children or {}) do
+    if is_in_tree(child) then
+      local c = create_tree_node(child, id)
+      table.insert(result, c)
+    end
+  end
+  return NuiTree.Node({
+    test_node = item,
+    id = id,
+    text = item.name,
+  }, item.children and result or nil)
+end
+
+---Tansforms a list of TestNodes into a list of NuiTree tables
+---@param nodes TestNode[]|TestEnumeration[]
+---@return NuiTree.Node[]
+local function create_tree(nodes)
+  local result = {}
+  for _, node in ipairs(nodes) do
+    table.insert(result, create_tree_node(node, ""))
+  end
+  return result
+end
+
+---COnfigures the split window
+---@param tree NuiTree
+local function configure_split(tree)
+  split:map("n", "q", function()
+    split:unmount()
+  end, { noremap = true })
+  local map_options = { noremap = true, nowait = true }
+  -- collapse current node
+  split:map("n", "h", function()
+    local node = tree:get_node()
+
+    if node and node:collapse() then
+      tree:render()
+    end
+  end, map_options)
+
+  -- collapse all nodes
+  split:map("n", "H", function()
+    local updated = false
+
+    for _, node in pairs(tree.nodes.by_id) do
+      updated = node:collapse() or updated
+    end
+
+    if updated then
+      tree:render()
+    end
+  end, map_options)
+
+  -- expand current node
+  split:map("n", "l", function()
+    local node = tree:get_node()
+
+    if node and node:expand() then
+      tree:render()
+    end
+  end, map_options)
+
+  -- expand all nodes
+  split:map("n", "L", function()
+    local updated = false
+
+    for _, node in pairs(tree.nodes.by_id) do
+      updated = node:expand() or updated
+    end
+
+    if updated then
+      tree:render()
+    end
+  end, map_options)
+end
+
+---@type table<TestNodeResult, string>
+local icons = {
+  ["Passed"] = "",
+  ["Failed"] = "",
+  ["Skipped"] = "⤼",
+  ["Expected Failure"] = "⚒︎",
+  ["unknown"] = "",
+}
+
+---@type table<TestNodeResult, string>
+local highlights = {
+  ["Passed"] = "DiagnosticOk",
+  ["Failed"] = "DiagnosticError",
+  ["Skipped"] = "DiagnosticInfo",
+  ["Expected Failure"] = "DiagnosticWarn",
+  ["unknown"] = "DiagnosticError",
+}
+
+---Formats a test enumeration or a test node for display in the runner list
+---@param item TestNode|TestEnumeration
+---@param line NuiLine
+local function format_item_nui(item, line)
+  line:append("[")
+  local result = item.result and icons[item.result] or " "
+  line:append(result, highlights[item.result] or "Normal")
+  line:append("] " .. item.name)
+  if item.duration then
+    line:append(" (")
+    line:append(item.duration, "DiagnosticInfo")
+    line:append(")")
+  end
+end
+
+---Displays the runner window
+---@param results TestNode[]|TestEnumeration[]|nil
+function M.show(results)
+  local nodes
+  if results == nil or #results == 0 then
+    nodes = {
+      NuiTree.Node({
+        text = "No tests found",
+        id = "no-tests",
+      }),
+    }
+  else
+    nodes = create_tree(results)
+  end
+  split:mount()
+
+  local tree = NuiTree({
+    bufnr = split.bufnr,
+    nodes = nodes,
+    prepare_node = function(node)
+      local line = NuiLine()
+      line:append(string.rep("  ", node:get_depth() - 1))
+
+      if node:has_children() then
+        line:append(node:is_expanded() and " " or " ", "SpecialChar")
+      else
+        line:append("  ")
+      end
+
+      if node.test_node then
+        format_item_nui(node.test_node, line)
+      else
+        line:append(node.text)
+      end
+      return line
+    end,
+  })
+
+  configure_split(tree)
+
+  tree:render()
 end
 
 return M
