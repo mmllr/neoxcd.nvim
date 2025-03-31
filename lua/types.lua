@@ -174,6 +174,7 @@ M.ProjectConstants = {
 ---@field name string
 ---@field nodeType TestNodeType
 ---@field result? TestNodeResult
+---@field nodeIdentifierURL? string
 ---@field nodeIdentifier? string
 ---@field duration? string
 ---@field details? string

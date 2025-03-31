@@ -284,7 +284,7 @@ local function create_tree_node(item, parentID)
   end
   return NuiTree.Node({
     test_node = item,
-    id = id,
+    id = item.nodeIdentifierURL or id,
     text = item.name,
   }, item.children and result or nil)
 end
@@ -300,13 +300,42 @@ local function create_tree(nodes)
   return result
 end
 
----COnfigures the split window
+---@param symbol string
+local function find_symbol(symbol)
+  local nio = require("nio")
+  nio.run(function()
+    local lsp = nio.lsp
+    local client = lsp.get_clients({ name = "sourcekit" })[1]
+    if client == nil then
+      print("No Sourcekit client")
+      return nil
+    end
+
+    local err, response = client.request.workspace_symbol({ query = symbol })
+    if err or response == nil then
+      print("Error: " .. (vim.inspect(err) or "No response"))
+      return
+    end
+    nio.scheduler()
+    print(vim.inspect(response))
+  end)
+end
+
+---Configures the split window
 ---@param tree NuiTree
 local function configure_split(tree)
   split:map("n", "q", function()
     split:unmount()
   end, { noremap = true })
   local map_options = { noremap = true, nowait = true }
+
+  split:map("n", "<CR>", function()
+    local node = tree:get_node()
+    if node and node.test_node then
+      find_symbol(node.test_node.name)
+    end
+  end, map_options)
+
   -- collapse current node
   split:map("n", "h", function()
     local node = tree:get_node()
