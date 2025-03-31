@@ -8,6 +8,7 @@ dependencies = {
 	"lua >= 5.1",
 	"nvim-nio",
 	"lrexlib-POSIX",
+	"nui.nvim",
 }
 test_dependencies = {
 	"nlua",
