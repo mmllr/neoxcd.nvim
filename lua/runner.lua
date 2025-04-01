@@ -1,6 +1,8 @@
 local NuiTree = require("nui.tree")
 local Split = require("nui.split")
 local NuiLine = require("nui.line")
+local util = require("util")
+local nio = require("nio")
 
 local M = {}
 
@@ -300,25 +302,32 @@ local function create_tree(nodes)
   return result
 end
 
+---@async
 ---@param symbol string
-local function find_symbol(symbol)
-  local nio = require("nio")
-  nio.run(function()
-    local lsp = nio.lsp
-    local client = lsp.get_clients({ name = "sourcekit" })[1]
-    if client == nil then
-      print("No Sourcekit client")
-      return nil
-    end
+---@param parent string
+local function find_symbol(symbol, parent)
+  local cmd = {
+    "rg",
+    "-t",
+    "swift",
+    "--multiline-dotall",
+    "--line-number",
+    "-U",
+    parent .. ".*" .. symbol,
+  }
+  local ripgrep = nio.wrap(util.run_job, 3)
+  local result = ripgrep(cmd, nil)
 
-    local err, response = client.request.workspace_symbol({ query = symbol })
-    if err or response == nil then
-      print("Error: " .. (vim.inspect(err) or "No response"))
-      return
+  if result.code == 0 and result.stdout then
+    local last_line = result.stdout:match("([^\n]*)\n?$")
+    local file_path, line_number = last_line:match("^(.-):(%d+):")
+    if file_path and line_number then
+      -- Open the file at the specified line number
+      nio.api.nvim_command("wincmd h | e +" .. line_number .. " " .. file_path)
+    else
+      print("No match found")
     end
-    nio.scheduler()
-    print(vim.inspect(response))
-  end)
+  end
 end
 
 ---Configures the split window
@@ -329,12 +338,21 @@ local function configure_split(tree)
   end, { noremap = true })
   local map_options = { noremap = true, nowait = true }
 
-  split:map("n", "<CR>", function()
-    local node = tree:get_node()
-    if node and node.test_node then
-      find_symbol(node.test_node.name)
-    end
-  end, map_options)
+  split:map(
+    "n",
+    "<CR>",
+    nio.create(function()
+      local node = tree:get_node()
+      if node and node.test_node then
+        local parent_id = node:get_parent_id()
+        local parent = tree:get_node(parent_id)
+        if parent and parent.test_node then
+          find_symbol(node.test_node.name, parent.test_node.name)
+        end
+      end
+    end),
+    { noremap = true, nowait = false }
+  )
 
   -- collapse current node
   split:map("n", "h", function()

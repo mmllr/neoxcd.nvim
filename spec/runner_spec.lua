@@ -298,4 +298,16 @@ describe("Test runner", function()
     }
     assert.are.same(expected, diagnostics)
   end)
+
+  it("Parses ripgrep output", function()
+    local output = [[
+project-kit/Tests/FeatureTests/FeatureTest.swift:10:    struct TheTest {
+project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigation() async throws {"
+]]
+    local last_line = output:match("([^\n]*)\n?$")
+    local file_path, line_number = last_line:match("^(.-):(%d+):")
+
+    assert.are.same("project-kit/Tests/FeatureTests/FeatureTest.swift", file_path)
+    assert.are.same(16, tonumber(line_number))
+  end)
 end)
