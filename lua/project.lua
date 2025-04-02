@@ -397,7 +397,7 @@ end
 ---@param target Target
 ---@return ProjectResultCode
 local function run_on_mac(target)
-  local result = cmd({ "open", target.app_path })
+  local result = cmd({ "open", target.app_path }, nil)
   return result.code
 end
 
