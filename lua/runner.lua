@@ -306,6 +306,7 @@ end
 ---@param symbol string
 ---@param parent string
 local function find_symbol(symbol, parent)
+  local test_name = symbol:match("^[^(]+") or symbol
   local cmd = {
     "rg",
     "-t",
@@ -313,7 +314,7 @@ local function find_symbol(symbol, parent)
     "--multiline-dotall",
     "--line-number",
     "-U",
-    parent .. ".*" .. symbol,
+    parent .. ".*" .. test_name,
   }
   local ripgrep = nio.wrap(util.run_job, 3)
   local result = ripgrep(cmd, nil)
