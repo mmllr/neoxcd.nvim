@@ -218,7 +218,7 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
           if test_node then
             table.insert(diagnostics, {
               kind = "symbol",
-              message = test_node.duration,
+              message = test_node.duration or "",
               severity = severity_for_result(test_node.result),
               line = test.range.start.line,
             })
