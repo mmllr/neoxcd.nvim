@@ -262,11 +262,23 @@ describe("Test runner", function()
       },
     }
 
-    ---@diagnostic disable-next-line: duplicate-set-field
-    lsp.document_symbol = function(buf)
-      return stubbed_symbols[buf]
+    local function stub_lsp()
+      vim.lsp.get_clients = function()
+        return { { bufnr = 42, name = "sourcekit", id = 1 } }
+      end
+      vim.uri_from_bufnr = function(bufnr)
+        assert(bufnr == 42)
+        return "file:///path/to/file"
+      end
+      vim.lsp.buf_request_all = function(buf, method, params, callback)
+        assert(method == "textDocument/documentSymbol")
+        callback({
+          [1] = { result = stubbed_symbols[buf] },
+        })
+      end
     end
 
+    stub_lsp()
     local diagnostics = sut.diagnostics_for_tests_in_buffer(42, results)
 
     ---@type TestDiagnostic[]

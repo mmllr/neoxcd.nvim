@@ -21,22 +21,32 @@ M.types = {}
 ---@field start lsp.types.Position The range's start position.
 ---@field end lsp.types.Position The range's end position.
 
+---Fetches document symbols from the LSP server
+---@param buf integer
+---@param callback function(results)
+local function document_symbol(buf, callback)
+  local clients = vim.lsp.get_clients({ name = "sourcekit", bufnr = buf })
+  if #clients == 0 then
+    callback(nil)
+    return
+  end
+
+  local clientID = clients[1].id
+  vim.lsp.buf_request_all(buf, "textDocument/documentSymbol", { textDocument = { uri = vim.uri_from_bufnr(buf) } }, function(result)
+    if result and result[clientID] and result[clientID].result then
+      callback(result[clientID].result)
+    else
+      callback(nil)
+    end
+  end)
+end
+
 ---Requests the LSP server for document symbols
 ---@async
 ---@param buf integer
 ---@return lsp.types.Symbol[]|nil
 function M.document_symbol(buf)
-  local lsp = nio.lsp
-  local client = lsp.get_clients({ name = "sourcekit", bufnr = buf })[1]
-  if client == nil then
-    return nil
-  end
-
-  local err, response = client.request.textDocument_documentSymbol({ textDocument = { uri = vim.uri_from_bufnr(buf) } }, buf)
-  if err or response == nil then
-    return
-  end
-  return response
+  return nio.wrap(document_symbol, 2)(buf)
 end
 
 return M
