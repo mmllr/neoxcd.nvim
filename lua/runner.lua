@@ -304,7 +304,7 @@ end
 
 ---@async
 ---@param symbol string
----@param parent string
+---@param parent string|nil
 local function find_symbol(symbol, parent)
   local test_name = symbol:match("^[^(]+") or symbol
   local cmd = {
@@ -313,9 +313,13 @@ local function find_symbol(symbol, parent)
     "swift",
     "--multiline-dotall",
     "--line-number",
-    "-U",
-    parent .. ".*" .. test_name,
   }
+  if parent ~= nil then
+    table.insert(cmd, "-U")
+    table.insert(cmd, parent .. ".*" .. test_name)
+  else
+    table.insert(cmd, "func\\s+" .. test_name)
+  end
   local ripgrep = nio.wrap(util.run_job, 3)
   local result = ripgrep(cmd, nil)
 
@@ -385,7 +389,7 @@ local function configure_split(tree)
       local node = tree:get_node()
       if node then
         local test, parent = find_node_symbol_names(node, tree)
-        if test and parent then
+        if test then
           find_symbol(test, parent)
         end
       end
