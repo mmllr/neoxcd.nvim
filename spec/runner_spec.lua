@@ -263,18 +263,20 @@ describe("Test runner", function()
     }
 
     local function stub_lsp()
-      vim.lsp.get_clients = function()
-        return { { bufnr = 42, name = "sourcekit", id = 1 } }
+      vim.lsp.get_clients = function(_)
+        return {
+          { bufnr = 42, name = "sourcekit", id = 1, flags = {} },
+        }
       end
       vim.uri_from_bufnr = function(bufnr)
         assert(bufnr == 42)
         return "file:///path/to/file"
       end
-      vim.lsp.buf_request_all = function(buf, method, params, callback)
+      vim.lsp.buf_request_all = function(buf, method, _, callback)
         assert(method == "textDocument/documentSymbol")
         callback({
           [1] = { result = stubbed_symbols[buf] },
-        })
+        }, { client_id = 1, method = method, bufnr = 42 })
       end
     end
 
