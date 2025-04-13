@@ -129,6 +129,7 @@ end
 ---@field debug fun()
 ---@field stop fun()
 ---@field scan fun()
+---@field test fun(test_identifier: string?)
 
 ---@type Neoxcd
 return {
@@ -193,9 +194,9 @@ return {
     end
     project.show_runner()
   end),
-  test = nio.create(function()
-    spinner.start("Running tests...")
-    local result = project.run_tests()
+  test = nio.create(function(identifier)
+    spinner.start(identifier and "Running " .. identifier or "Running tests...")
+    local result = project.run_tests(identifier)
     nio.scheduler()
     spinner.stop()
     if result ~= 0 then

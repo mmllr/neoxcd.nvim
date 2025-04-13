@@ -651,8 +651,9 @@ end
 
 ---Runs the tests in the current project
 ---@async
+---@param testIdentifier? string
 ---@return ProjectResultCode
-function M.run_tests()
+function M.run_tests(testIdentifier)
   if M.current_project == nil then
     return M.ProjectResult.NO_PROJECT
   elseif M.current_project.destination == nil then
@@ -666,6 +667,7 @@ function M.run_tests()
   local results_path = util.get_cwd() .. "/.neoxcd/tests.xcresult"
   cmd({ "rm", "-rf", results_path }, nil)
   local opts = M.build_options_for_project(M.current_project)
+  local selected_tests = testIdentifier and { "-only-testing:" .. testIdentifier } or {}
   local result = cmd(
     util.concat({
       "xcodebuild",
@@ -676,7 +678,7 @@ function M.run_tests()
       "id=" .. M.current_project.destination.id,
       "-resultBundlePath",
       results_path,
-    }, opts),
+    }, opts, selected_tests),
     nil
   )
 

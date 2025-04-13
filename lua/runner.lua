@@ -397,6 +397,21 @@ local function configure_split(tree)
     { noremap = true, nowait = false }
   )
 
+  split:map(
+    "n",
+    "r",
+    nio.create(function()
+      local node = tree:get_node()
+      if node and node.test_node and node.test_node.nodeIdentifier then
+        local bundle_node = find_parent_test_node(node, "Unit test bundle", tree)
+        if bundle_node and bundle_node.test_node then
+          require("neoxcd").test(bundle_node.test_node.name .. "/" .. node.test_node.nodeIdentifier)
+        end
+      end
+    end),
+    { noremap = true, nowait = false }
+  )
+
   -- collapse current node
   split:map("n", "h", function()
     local node = tree:get_node()
