@@ -56,21 +56,6 @@ M.run_dap = function(config)
   dap.run(config)
 end
 
----Concatenate two tables
----@param lhs table
----@param rhs table
----@return table
-function M.concat(lhs, rhs)
-  local result = {}
-  for _, v in ipairs(lhs) do
-    table.insert(result, v)
-  end
-  for _, v in ipairs(rhs) do
-    table.insert(result, v)
-  end
-  return result
-end
-
 ---Removes nil values from a table
 ---@param array any[]
 ---@return any[]
@@ -240,6 +225,23 @@ end
 
 function M.has_suffix(str, suffix)
   return str:sub(-#suffix) == suffix
+end
+
+---Concatenates multiple tables
+---@param ... any[]
+---@return any[]
+function M.concat(...)
+  local result = {}
+  for i = 1, select("#", ...) do
+    local t = select(i, ...)
+    if type(t) ~= "table" then
+      error("Expected table, got " .. type(t))
+    end
+    for _, v in ipairs(t) do
+      table.insert(result, v)
+    end
+  end
+  return result
 end
 
 return M
