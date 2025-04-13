@@ -331,6 +331,45 @@ local function find_symbol(symbol, parent)
   end
 end
 
+---Finds a parent node in a nui tree with a specific test node type
+---@param node NuiTree.Node
+---@param type TestNodeType
+---@param tree NuiTree
+---@return NuiTree.Node|nil
+local function find_parent_test_node(node, type, tree)
+  if node.test_node and node.test_node.nodeType == type then
+    return node
+  else
+    local parent_id = node:get_parent_id()
+    if parent_id == nil then
+      return nil
+    end
+    local parent = tree:get_node(parent_id)
+    if parent == nil then
+      return nil
+    end
+    return find_parent_test_node(parent, type, tree)
+  end
+end
+
+---Finds a parent node in a nui tree with a specific test node type
+---@param node NuiTree.Node
+---@param tree NuiTree
+---@return string|nil
+---@return string|nil
+local function find_node_symbol_names(node, tree)
+  if node.test_node and node.test_node.nodeType == "Test Case" then
+    local parent = find_parent_test_node(node, "Test Suite", tree)
+    return node.test_node.name, parent and parent.test_node and parent.test_node.name or nil
+  else
+    local parent = find_parent_test_node(node, "Test Case", tree)
+    if parent ~= nil then
+      return find_node_symbol_names(parent, tree)
+    end
+    return nil, nil
+  end
+end
+
 ---Configures the split window
 ---@param tree NuiTree
 local function configure_split(tree)
@@ -344,11 +383,10 @@ local function configure_split(tree)
     "<CR>",
     nio.create(function()
       local node = tree:get_node()
-      if node and node.test_node then
-        local parent_id = node:get_parent_id()
-        local parent = tree:get_node(parent_id)
-        if parent and parent.test_node then
-          find_symbol(node.test_node.name, parent.test_node.name)
+      if node then
+        local test, parent = find_node_symbol_names(node, tree)
+        if test and parent then
+          find_symbol(test, parent)
         end
       end
     end),
