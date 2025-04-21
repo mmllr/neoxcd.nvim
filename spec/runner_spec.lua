@@ -1,13 +1,9 @@
 local assert = require("luassert")
-local types = require("types")
-local util = require("util")
-local helpers = require("spec/helpers")
 
 describe("Test runner", function()
   local sut = require("runner")
   local nio = require("nio")
   local it = nio.tests.it
-  local lsp = require("lsp")
 
   it("Parses test node identifiers", function()
     local class_name, method_name = sut.get_class_and_method("Test/testSomething")
