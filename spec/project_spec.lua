@@ -649,6 +649,19 @@ describe("neoxcd plugin", function()
 
       files["/cwd/.neoxcd/tests.json"] = json
       stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/tests.json" }, "")
+      stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/scan.xcresult" }, "")
+      stub_external_cmd(0, {
+        "xcodebuild",
+        "build-for-testing",
+        "-scheme",
+        "testScheme",
+        "-destination",
+        "id=deadbeef-deadbeefdeadbeef",
+        "-resultBundlePath",
+        "/cwd/.neoxcd/scan.xcresult",
+        "-project",
+        "project.xcodeproj",
+      }, "")
       stub_external_cmd(0, {
         "xcodebuild",
         "test-without-building",
