@@ -163,7 +163,6 @@ local function load_project()
       scheme = decoded.scheme,
       destination = decoded.destination,
       schemes = decoded.schemes,
-      tests = {},
     }
     vim.g.neoxcd_scheme = decoded.scheme
     vim.g.neoxcd_destination = util.format_destination(decoded.destination)
@@ -517,6 +516,55 @@ local function update_build_results(results_path)
   return build_results.code
 end
 
+---Parses a list of TestEnumerations into a list of TestNodes
+---@param enumerations TestEnumeration[]
+---@return TestNode[]
+local function parse_discovered_tests_into_nodes(enumerations)
+  ---@type table<TestEnumerationKind, TestNodeType>
+  local kind_to_node_type = {
+    ["plan"] = "Test Plan",
+    ["target"] = "Unit test bundle",
+    ["class"] = "Test Suite",
+    ["test"] = "Test Case",
+  }
+
+  ---@param enumeration TestEnumeration
+  ---@return TestNode?
+  local function convert(enumeration)
+    local type = kind_to_node_type[enumeration.kind]
+    if not type then
+      return nil
+    end
+    local node = {
+      name = enumeration.name,
+      nodeType = type,
+    }
+    local child_nodes = {}
+    for _, child in ipairs(enumeration.children) do
+      local child_node = convert(child)
+      if child_node ~= nil then
+        if enumeration.kind == "class" and child.kind == "test" then
+          child_node.nodeIdentifier = enumeration.name .. "/" .. child.name
+        end
+        table.insert(child_nodes, child_node)
+      end
+    end
+    if #child_nodes > 0 then
+      node.children = child_nodes
+    end
+    return node
+  end
+
+  local nodes = {}
+  for _, enumeration in ipairs(enumerations) do
+    local node = convert(enumeration)
+    if node ~= nil then
+      table.insert(nodes, node)
+    end
+  end
+  return nodes
+end
+
 ---Debugs the current project
 ---@async
 ---@return ProjectResultCode
@@ -577,7 +625,7 @@ function M.discover_tests()
     return M.ProjectResult.NO_DESTINATION
   end
 
-  M.current_project.tests = {}
+  M.current_project.test_results = {}
   nio.scheduler()
   local results_path = util.get_cwd() .. "/.neoxcd/scan.xcresult"
   local opts = M.build_options_for_project(M.current_project)
@@ -638,7 +686,7 @@ function M.discover_tests()
   if data == nil or data.values == nil then
     return M.ProjectResult.INVALID_JSON
   end
-  M.current_project.tests = data.values
+  M.current_project.test_results = parse_discovered_tests_into_nodes(data.values)
   return result.code
 end
 

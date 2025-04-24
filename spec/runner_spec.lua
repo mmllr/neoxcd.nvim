@@ -17,44 +17,43 @@ describe("Test runner", function()
   end)
 
   it("parses enumerated tests", function()
-    ---@type TestEnumeration[]
+    ---@type TestNode[]
     local results = {
       {
         name = "Test Plan",
-        kind = "plan",
-        disabled = false,
+        nodeType = "Test Plan",
         children = {
           {
             name = "Test target",
-            kind = "target",
+            nodeType = "Unit test bundle",
             disabled = false,
             children = {
               {
                 name = "Test",
-                kind = "test",
+                nodeType = "Test Case",
                 disabled = false,
                 children = {},
               },
               {
                 name = "Test 2",
-                kind = "test",
+                nodeType = "Test Case",
                 disabled = false,
                 children = {},
               },
               {
                 name = "TestCase1",
-                kind = "class",
+                nodeType = "Test Suite",
                 disabled = false,
                 children = {
                   {
                     name = "Test1",
-                    kind = "test",
+                    nodeType = "Test Case",
                     disabled = false,
                     children = {},
                   },
                   {
                     name = "Test2",
-                    kind = "test",
+                    nodeType = "Test Case",
                     disabled = false,
                     children = {},
                   },
@@ -62,18 +61,18 @@ describe("Test runner", function()
               },
               {
                 name = "TestCase2",
-                kind = "class",
+                nodeType = "Test Suite",
                 disabled = false,
                 children = {
                   {
                     name = "Test1",
-                    kind = "test",
+                    nodeType = "Test Case",
                     disabled = false,
                     children = {},
                   },
                   {
                     name = "Test2",
-                    kind = "test",
+                    nodeType = "Test Case",
                     disabled = false,
                     children = {},
                   },

@@ -8,10 +8,6 @@ local M = {}
 
 ---@type table<string, string>
 local symbols = {
-  plan = "╮󰙨",
-  target = "╮",
-  test = "",
-  class = "╮󰅩",
   ["Unit test bundle"] = "╮",
   ["Test Suite"] = "╮󰅩",
   ["Test Case"] = "",
@@ -25,12 +21,8 @@ local result_icons = {
   ["Failed"] = " []",
 }
 
----@type string[]
+---@type TestNodeType[]
 local included_node_types = {
-  "plan",
-  "target",
-  "test",
-  "class",
   "Test Plan",
   "Test Case",
   "Test Suite",
@@ -72,12 +64,12 @@ function M.children_with_type(node, type)
   return results
 end
 
----Formats a test enumeration or a test node for display in the runner list
----@param item TestNode|TestEnumeration
+---Formats a test node for display in the runner list
+---@param item TestNode
 ---@param is_last boolean
 ---@return string
 local function format_item(item, is_last)
-  local key = item.kind or item.nodeType
+  local key = item.nodeType
 
   local symbol = symbols[key] or "???"
   local connector = (is_last and "╰─" or "├─")
@@ -85,7 +77,7 @@ local function format_item(item, is_last)
   return connector .. symbol .. " " .. item.name .. result
 end
 
----@param node TestEnumeration|TestNode
+---@param node TestNode
 ---@param prefix string
 ---@param is_last boolean
 ---@return string[]
@@ -96,7 +88,7 @@ local function format_node(node, prefix, is_last)
   if node.children and #node.children > 0 then
     for i, child in ipairs(node.children) do
       local new_prefix = prefix .. (is_last and "  " or "│ ")
-      if vim.tbl_contains(included_node_types, child.nodeType or child.kind) then
+      if vim.tbl_contains(included_node_types, child.nodeType) then
         local child_lines = format_node(child, new_prefix, i == #node.children)
         for _, child_line in ipairs(child_lines) do
           table.insert(lines, child_line)
@@ -108,8 +100,8 @@ local function format_node(node, prefix, is_last)
   return lines
 end
 
----Formats a list of TestEnumeration objects for display in the runner list
----@param items  TestEnumeration[]|TestNode[] List of test results
+---Formats a list of TestNode objects for display in the runner list
+---@param items  TestNode[] List of test results
 ---@return string[] List of formatted results
 function M.format(items)
   local lines = {}
@@ -250,7 +242,7 @@ local split = Split({
   position = "right",
 })
 
----@param node TestNode|TestEnumeration
+---@param node TestNode
 ---@return boolean
 local function is_in_tree(node)
   if node.nodeType and node.nodeType == "Failure Message" then
@@ -260,7 +252,7 @@ local function is_in_tree(node)
   end
 end
 
----@param node TestNode|TestEnumeration
+---@param node TestNode
 ---@return string
 local function id_for_node(node)
   if node.nodeType and node.nodeType == "Repetition" then
@@ -270,8 +262,8 @@ local function id_for_node(node)
   end
 end
 
----Creates a NuiTeee.Node from a TestNode|TestEnumeration
----@param item TestNode|TestEnumeration
+---Creates a NuiTeee.Node from a TestNode
+---@param item TestNode
 ---@param parentID string
 ---@return NuiTree.Node|nil
 local function create_tree_node(item, parentID)
@@ -292,7 +284,7 @@ local function create_tree_node(item, parentID)
 end
 
 ---Tansforms a list of TestNodes into a list of NuiTree tables
----@param nodes TestNode[]|TestEnumeration[]
+---@param nodes TestNode[]
 ---@return NuiTree.Node[]
 local function create_tree(nodes)
   local result = {}
@@ -475,8 +467,8 @@ local highlights = {
   ["unknown"] = "DiagnosticError",
 }
 
----Formats a test enumeration or a test node for display in the runner list
----@param item TestNode|TestEnumeration
+---Formats a test node for display in the runner list
+---@param item TestNode
 ---@param line NuiLine
 local function format_item_nui(item, line)
   line:append("[")
@@ -491,7 +483,7 @@ local function format_item_nui(item, line)
 end
 
 ---Displays the runner window
----@param results TestNode[]|TestEnumeration[]|nil
+---@param results TestNode[]|nil
 function M.show(results)
   local nodes
   if results == nil or #results == 0 then

@@ -621,13 +621,13 @@ describe("neoxcd plugin", function()
                       "children": [
                         {
                         "children": [],
-                        "name": "testA",
+                        "name": "testA()",
                         "kind": "test",
                         "disabled": false
                         },
                         {
                         "children": [],
-                        "name": "testB",
+                        "name": "testB(param:)",
                         "kind": "test",
                         "disabled": false
                         }
@@ -683,30 +683,27 @@ describe("neoxcd plugin", function()
       }, "")
 
       assert.are.same(project.ProjectResult.SUCCESS, project.discover_tests())
-      assert.are.same({
+      ---@type TestNode[]
+      local expected = {
         {
           children = {
             {
               name = "Target",
-              kind = "target",
-              disabled = false,
+              nodeType = "Unit test bundle",
               children = {
                 {
                   name = "TestClassName",
-                  kind = "class",
-                  disabled = false,
+                  nodeType = "Test Suite",
                   children = {
                     {
-                      name = "testA",
-                      kind = "test",
-                      disabled = false,
-                      children = {},
+                      name = "testA()",
+                      nodeType = "Test Case",
+                      nodeIdentifier = "TestClassName/testA()",
                     },
                     {
-                      name = "testB",
-                      kind = "test",
-                      disabled = false,
-                      children = {},
+                      name = "testB(param:)",
+                      nodeType = "Test Case",
+                      nodeIdentifier = "TestClassName/testB(param:)",
                     },
                   },
                 },
@@ -714,10 +711,11 @@ describe("neoxcd plugin", function()
             },
           },
           name = "PlanName",
-          kind = "plan",
-          disabled = false,
+          nodeType = "Test Plan",
         },
-      }, project.current_project.tests)
+      }
+
+      assert.are.same(expected, project.current_project.test_results)
     end)
 
     it("Runs test", function()
@@ -1053,7 +1051,6 @@ describe("neoxcd plugin", function()
             name = "iPhone 16 Pro",
           },
           schemes = { "SchemeA", "SchemeB", "SchemeC" },
-          tests = {},
         }, project.current_project)
         assert.are.same({
           {

@@ -121,7 +121,6 @@ M.ProjectConstants = {
 ---@field schemes string[]
 ---@field quickfixes? QuickfixEntry[]
 ---@field build_settings? table<string, string>
----@field tests TestEnumeration[]
 ---@field test_results? TestNode[]
 
 ---A class representing a build target
