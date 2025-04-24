@@ -540,7 +540,7 @@ local function parse_discovered_tests_into_nodes(enumerations)
       nodeType = type,
     }
     local child_nodes = {}
-    for _, child in ipairs(enumeration.children) do
+    for _, child in ipairs(enumeration.children or {}) do
       local child_node = convert(child)
       if child_node ~= nil then
         if enumeration.kind == "class" and child.kind == "test" then
