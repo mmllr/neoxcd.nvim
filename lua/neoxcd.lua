@@ -155,15 +155,11 @@ return {
   select_schemes = nio.create(select_schemes),
   select_destination = nio.create(select_destination),
   run = nio.create(function()
-    spinner.start("Opening in simulator...")
+    spinner.start("Starting " .. project.current_project.name .. "...")
     local result = project.run()
     spinner.stop()
     if result ~= 0 then
-      vim.notify(
-        "Failed to open project in simulator, failed with error " .. result,
-        vim.log.levels.ERROR,
-        { id = "Neoxcd", title = "Neoxcd" }
-      )
+      vim.notify("Failed to run, failed with error " .. result, vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
     end
   end),
   open_in_xcode = nio.create(open_in_xcode),
