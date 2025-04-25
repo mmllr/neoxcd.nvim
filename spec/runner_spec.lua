@@ -133,7 +133,7 @@ describe("Test runner", function()
     assert.are.same({
       "╰─╮󰙨 Plan []",
       "  ╰─╮ Test target []",
-      "    ╰─╮󰅩 Test []",
+      "    ╰─╮󰅩 Test []",
       "      ╰─ testSomething() []",
     }, sut.format(results))
   end)
@@ -182,8 +182,8 @@ describe("Test runner", function()
     assert.are.same({
       "╰─╮󰙨 Plan []",
       "  ╰─╮ Test target []",
-      "    ╰─╮󰅩 Test []",
-      "      ╰─ testSomething() []",
+      "    ╰─╮󰅩 Test []",
+      "      ╰─ testSomething() []",
     }, sut.format(results))
   end)
 

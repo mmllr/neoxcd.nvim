@@ -18,7 +18,7 @@ local symbols = {
 
 local result_icons = {
   ["Passed"] = " []",
-  ["Failed"] = " []",
+  ["Failed"] = " []",
 }
 
 ---@type TestNodeType[]
