@@ -696,8 +696,7 @@ function M.discover_tests()
 end
 
 function M.show_runner()
-  local results = M.current_project.test_results or M.current_project.tests
-  runner.show(results)
+  runner.show(M.current_project.test_results)
 end
 
 ---Gets all failure message nodes from the test results
