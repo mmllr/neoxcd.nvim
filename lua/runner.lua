@@ -464,7 +464,7 @@ local highlights = {
   ["Failed"] = "DiagnosticError",
   ["Skipped"] = "DiagnosticInfo",
   ["Expected Failure"] = "DiagnosticWarn",
-  ["unknown"] = "DiagnosticError",
+  ["unknown"] = "DiagnosticInfo",
 }
 
 ---Formats a test node for display in the runner list
