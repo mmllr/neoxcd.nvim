@@ -27,6 +27,7 @@ local M = {}
 ---@field NO_PROCESS ProjectResultCode
 ---@field NO_TESTS ProjectResultCode
 ---@field INVALID_JSON ProjectResultCode
+---@field BUILD_FAILED ProjectResultCode
 
 ---@type ProjectResultConstants
 M.ProjectResult = {
@@ -41,6 +42,7 @@ M.ProjectResult = {
   NO_PROCESS = -8,
   NO_TESTS = -9,
   INVALID_JSON = -10,
+  BUILD_FAILED = -11,
 }
 
 ---@type DestinationCache
@@ -511,6 +513,7 @@ local function update_build_results(results_path)
       M.current_project.quickfixes = quickfixes
       nio.scheduler()
       vim.fn.setqflist(quickfixes, "r")
+      return M.ProjectResult.BUILD_FAILED
     end
   end
   return build_results.code
@@ -778,7 +781,9 @@ function M.run_tests(testIdentifier)
 
   if result.code ~= 0 then
     local update_result = update_build_results(results_path)
-    return update_result == M.ProjectResult.SUCCESS and result.code or update_result
+    if update_result ~= M.ProjectResult.SUCCESS then
+      return update_result
+    end
   end
   local test_result = cmd({
     "xcrun",

@@ -936,7 +936,7 @@ describe("neoxcd plugin", function()
       ]]
       )
 
-      assert.are.same(-1, project.run_tests())
+      assert.are.same(project.ProjectResult.BUILD_FAILED, project.run_tests())
       assert.are.same({
         ---@type QuickfixEntry
         {
