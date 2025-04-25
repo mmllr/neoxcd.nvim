@@ -519,7 +519,7 @@ end
 ---Parses a list of TestEnumerations into a list of TestNodes
 ---@param enumerations TestEnumeration[]
 ---@return TestNode[]
-local function parse_discovered_tests_into_nodes(enumerations)
+local function parse_discovered_tests(enumerations)
   ---@type table<TestEnumerationKind, TestNodeType>
   local kind_to_node_type = {
     ["plan"] = "Test Plan",
@@ -535,9 +535,11 @@ local function parse_discovered_tests_into_nodes(enumerations)
     if not type then
       return nil
     end
+    ---@type TestNode
     local node = {
       name = enumeration.name,
       nodeType = type,
+      result = "unknown",
     }
     local child_nodes = {}
     for _, child in ipairs(enumeration.children or {}) do
@@ -686,7 +688,7 @@ function M.discover_tests()
   if data == nil or data.values == nil then
     return M.ProjectResult.INVALID_JSON
   end
-  M.current_project.test_results = parse_discovered_tests_into_nodes(data.values)
+  M.current_project.test_results = parse_discovered_tests(data.values)
   return result.code
 end
 

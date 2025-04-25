@@ -690,19 +690,23 @@ describe("neoxcd plugin", function()
             {
               name = "Target",
               nodeType = "Unit test bundle",
+              result = "unknown",
               children = {
                 {
                   name = "TestClassName",
                   nodeType = "Test Suite",
+                  result = "unknown",
                   children = {
                     {
                       name = "testA()",
                       nodeType = "Test Case",
+                      result = "unknown",
                       nodeIdentifier = "TestClassName/testA()",
                     },
                     {
                       name = "testB(param:)",
                       nodeType = "Test Case",
+                      result = "unknown",
                       nodeIdentifier = "TestClassName/testB(param:)",
                     },
                   },
@@ -712,6 +716,7 @@ describe("neoxcd plugin", function()
           },
           name = "PlanName",
           nodeType = "Test Plan",
+          result = "unknown",
         },
       }
 
