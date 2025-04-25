@@ -556,4 +556,55 @@ function M.show(results)
   tree:render()
 end
 
+---@param existing TestNode[]
+---@param new TestNode[]
+---@return TestNode[]
+function M.merge_nodes(existing, new)
+  -- Create a lookup table for updated nodes by their name
+  local updated_lookup = {}
+
+  for _, node in ipairs(new) do
+    updated_lookup[node.name] = node
+  end
+
+  ---@param existing_node TestNode
+  ---@param updated? TestNode
+  ---@return TestNode
+  local function deep_merge(existing_node, updated)
+    local merged = {}
+
+    -- Copy all from existing node
+    for k, v in pairs(existing_node) do
+      merged[k] = v
+    end
+
+    -- Override result based on presence in updated
+    if updated then
+      merged.result = updated.result
+    else
+      merged.result = "unknown"
+    end
+
+    -- Merge children
+    local children1 = existing_node.children or {}
+    local children2 = updated and updated.children or {}
+    merged.children = M.merge_nodes(children1, children2)
+
+    return merged
+  end
+
+  local mergedList = {}
+
+  for _, node in ipairs(existing or {}) do
+    table.insert(mergedList, deep_merge(node, updated_lookup[node.name]))
+    updated_lookup[node.name] = nil
+  end
+
+  for _, node in pairs(updated_lookup) do
+    table.insert(mergedList, node)
+  end
+
+  return mergedList
+end
+
 return M

@@ -323,4 +323,146 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
     assert.are.same("project-kit/Tests/FeatureTests/FeatureTest.swift", file_path)
     assert.are.same(16, tonumber(line_number))
   end)
+
+  describe("Merging nodes", function()
+    it("Empty nodes", function()
+      assert.are.same({}, sut.merge_nodes({}, {}))
+    end)
+
+    it("Identical nodes", function()
+      local existing = {
+        name = "Test",
+        nodeType = "Test Plan",
+        result = "Failed",
+        children = {},
+      }
+      local node = {
+        name = "Test",
+        nodeType = "Test Plan",
+        result = "Passed",
+        children = {},
+      }
+      assert.are.same({ node }, sut.merge_nodes({ existing }, { node }))
+    end)
+
+    it("new into empty existing", function()
+      local existing = {}
+      local node = {
+        name = "Test",
+        nodeType = "Test Plan",
+        result = "Passed",
+        children = {},
+      }
+      assert.are.same({ node }, sut.merge_nodes(existing, { node }))
+    end)
+
+    it("new into existing", function()
+      ---@type TestNode
+      local existing = {
+        name = "Test",
+        nodeType = "Test Plan",
+        result = "Passed",
+        children = {
+          {
+            name = "Suite 1",
+            nodeType = "Test Suite",
+            result = "Passed",
+            children = {
+              {
+                name = "Test",
+                nodeType = "Test Case",
+                result = "Passed",
+                children = {},
+              },
+              {
+                name = "Test 2",
+                nodeType = "Test Case",
+                result = "Passed",
+                children = {},
+              },
+            },
+          },
+          {
+            name = "Another Suite",
+            nodeType = "Test Suite",
+            result = "Passed",
+            children = {
+              {
+                name = "Test 3",
+                nodeType = "Test Case",
+                result = "Passed",
+                children = {},
+              },
+            },
+          },
+        },
+      }
+      ---@type TestNode
+      local node = {
+        name = "Test",
+        nodeType = "Test Plan",
+        result = "Failed",
+        children = {
+          {
+            name = "Suite 1",
+            nodeType = "Test Suite",
+            result = "Failed",
+            children = {
+              {
+                name = "Test",
+                nodeType = "Test Case",
+                result = "Failed",
+                children = {},
+              },
+            },
+          },
+        },
+      }
+
+      local actual = sut.merge_nodes({ existing }, { node })
+      ---@type TestNode[]
+      local expected = {
+        {
+          name = "Test",
+          nodeType = "Test Plan",
+          result = "Failed",
+          children = {
+            {
+              name = "Suite 1",
+              nodeType = "Test Suite",
+              result = "Failed",
+              children = {
+                {
+                  name = "Test",
+                  nodeType = "Test Case",
+                  result = "Failed",
+                  children = {},
+                },
+                {
+                  name = "Test 2",
+                  nodeType = "Test Case",
+                  result = "unknown",
+                  children = {},
+                },
+              },
+            },
+            {
+              name = "Another Suite",
+              nodeType = "Test Suite",
+              result = "unknown",
+              children = {
+                {
+                  name = "Test 3",
+                  nodeType = "Test Case",
+                  result = "unknown",
+                  children = {},
+                },
+              },
+            },
+          },
+        },
+      }
+      assert.are.same(actual, expected)
+    end)
+  end)
 end)
