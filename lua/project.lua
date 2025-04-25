@@ -831,10 +831,10 @@ local function add_diagnostic_to_buffer(buf, diag)
   elseif diag.kind == "symbol" then
     nio.api.nvim_buf_set_extmark(buf, diagnosticsNamespace, diag.line, 0, {
       virt_text = {
-        { diag.message, diag.severity == vim.diagnostic.severity.ERROR and "DiagnosticVirtualTextError" or "DiagnosticVirtualTextOk" },
+        { diag.message, runner.virtual_highlight_for_result(diag.result) },
       },
-      sign_text = diag.severity == vim.diagnostic.severity.ERROR and "" or "✓",
-      sign_hl_group = diag.severity == vim.diagnostic.severity.ERROR and "DiagnosticSignError" or "DiagnosticSignOk",
+      sign_text = runner.icon_for_result(diag.result),
+      sign_hl_group = runner.highlight_for_result(diag.result),
     })
   end
 end

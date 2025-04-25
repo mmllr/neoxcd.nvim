@@ -41,6 +41,52 @@ local included_node_types = {
 ---@field message string
 ---@field line number
 ---@field severity vim.diagnostic.Severity
+---@field result TestNodeResult
+
+---Returns the icon for a test node result
+---@param result? TestNodeResult
+---@return string
+function M.icon_for_result(result)
+  ---@type table<TestNodeResult, string>
+  local icons = {
+    ["Passed"] = "",
+    ["Failed"] = "",
+    ["Skipped"] = "⤼",
+    ["Expected Failure"] = "⚒︎",
+    ["unknown"] = "",
+  }
+  return icons[result or "unknown"]
+end
+
+---Returns the highlight for a test node result
+---@param result? TestNodeResult
+---@return string
+function M.highlight_for_result(result)
+  ---@type table<TestNodeResult, string>
+  local highlights = {
+    ["Passed"] = "DiagnosticOk",
+    ["Failed"] = "DiagnosticError",
+    ["Skipped"] = "DiagnosticInfo",
+    ["Expected Failure"] = "DiagnosticWarn",
+    ["unknown"] = "DiagnosticInfo",
+  }
+  return highlights[result or "unknown"]
+end
+
+---Returns the highlight for a test node result
+---@param result? TestNodeResult
+---@return string
+function M.virtual_highlight_for_result(result)
+  ---@type table<TestNodeResult, string>
+  local highlights = {
+    ["Passed"] = "DiagnosticOk",
+    ["Failed"] = "DiagnosticError",
+    ["Skipped"] = "DiagnosticInfo",
+    ["Expected Failure"] = "DiagnosticWarn",
+    ["unknown"] = "DiagnosticInfo",
+  }
+  return highlights[result or "unknown"]
+end
 
 ---Gets all child nodes with a certain type
 ---@param node TestNode
@@ -188,6 +234,7 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
   local suites = vim.tbl_filter(function(s)
     return s.kind == 5 or s.kind == 23
   end, document_symbols)
+  ---@type TestDiagnostic[]
   local diagnostics = {}
 
   for _, suite in pairs(suites) do
@@ -200,6 +247,7 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
         message = node.duration or "",
         severity = severity_for_result(node.result),
         line = suite.range.start.line,
+        result = node.result or "unknown",
       })
 
       for _, test in ipairs(suite.children or {}) do
@@ -213,6 +261,7 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
               message = test_node.duration or "",
               severity = severity_for_result(test_node.result),
               line = test.range.start.line,
+              result = test_node.result or "unknown",
             })
 
             local failures = find_nodes_with_predicate(test_node.children or {}, function(n)
@@ -225,6 +274,7 @@ function M.diagnostics_for_tests_in_buffer(buf, nodes)
                 message = message,
                 severity = vim.diagnostic.severity.ERROR,
                 line = tonumber(line) - 1,
+                result = test_node.result or "unknown",
               })
             end
           end
@@ -449,31 +499,12 @@ local function configure_split(tree)
   end, map_options)
 end
 
----@type table<TestNodeResult, string>
-local icons = {
-  ["Passed"] = "",
-  ["Failed"] = "",
-  ["Skipped"] = "⤼",
-  ["Expected Failure"] = "⚒︎",
-  ["unknown"] = "",
-}
-
----@type table<TestNodeResult, string>
-local highlights = {
-  ["Passed"] = "DiagnosticOk",
-  ["Failed"] = "DiagnosticError",
-  ["Skipped"] = "DiagnosticInfo",
-  ["Expected Failure"] = "DiagnosticWarn",
-  ["unknown"] = "DiagnosticInfo",
-}
-
 ---Formats a test node for display in the runner list
 ---@param item TestNode
 ---@param line NuiLine
 local function format_item_nui(item, line)
   line:append("[")
-  local result = item.result and icons[item.result] or " "
-  line:append(result, highlights[item.result] or "Normal")
+  line:append(M.icon_for_result(item.result), M.highlight_for_result(item.result))
   line:append("] " .. item.name)
   if item.duration then
     line:append(" (")

@@ -285,24 +285,28 @@ describe("Test runner", function()
         message = "42s",
         severity = vim.diagnostic.severity.ERROR,
         line = 0,
+        result = "Failed",
       },
       {
         kind = "symbol",
         message = "1.234s",
         severity = vim.diagnostic.severity.ERROR,
         line = 30,
+        result = "Failed",
       },
       {
         kind = "failure",
         message = "Issue recorded: A state change does not match expectation: …\n\n      State(\n        _selection: .someState,\n\n(Expected: −, Actual: +)",
         severity = vim.diagnostic.severity.ERROR,
         line = 40,
+        result = "Failed",
       },
       {
         kind = "symbol",
         message = "0.815s",
         severity = vim.diagnostic.severity.INFO,
         line = 50,
+        result = "Passed",
       },
     }
     assert.are.same(expected, diagnostics)
