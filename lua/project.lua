@@ -804,7 +804,11 @@ function M.run_tests(testIdentifier)
     if data == nil or data.testNodes == nil then
       return M.ProjectResult.INVALID_JSON
     end
-    M.current_project.test_results = data.testNodes
+    if testIdentifier and M.current_project.test_results then
+      M.current_project.test_results = runner.merge_nodes(M.current_project.test_results, data.testNodes)
+    else
+      M.current_project.test_results = data.testNodes
+    end
     local quickfixes = update_quickfix_list(data.testNodes)
     if quickfixes and #quickfixes > 0 then
       M.current_project.quickfixes = quickfixes
