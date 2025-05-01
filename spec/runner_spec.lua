@@ -465,4 +465,142 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
       assert.are.same(actual, expected)
     end)
   end)
+
+  describe("Test result tree", function()
+    ---@return integer
+    local function tree_buf_nr()
+      local wins = vim.api.nvim_list_wins()
+      return vim.api.nvim_win_get_buf(wins[#wins])
+    end
+
+    ---@return string[]
+    local function tree_content()
+      return vim.api.nvim_buf_get_lines(tree_buf_nr(), 0, -1, false)
+    end
+
+    ---@param keymap string
+    local function invoke_keymap(keymap)
+      local keymaps = vim.api.nvim_buf_get_keymap(tree_buf_nr(), "n")
+      for _, mapping in ipairs(keymaps) do
+        if mapping.lhs == keymap and mapping.callback then
+          local ok, err = pcall(mapping.callback, mapping.lhs)
+
+          assert.is_true(ok)
+          assert.is_nil(err)
+          return
+        end
+      end
+    end
+
+    it("show command opens a new window", function()
+      local before = vim.api.nvim_list_wins()
+      assert.are.equal(1, #before)
+      sut.show({})
+
+      local after = vim.api.nvim_list_wins()
+      assert.are.equal(2, #after)
+    end)
+
+    it("show command with no tests", function()
+      assert.are.same({ "  No tests found" }, tree_content())
+    end)
+
+    it("show command with tests", function()
+      ---@type TestNode[]
+      local results = {
+        {
+          name = "Test Plan 1",
+          nodeType = "Test Plan",
+          result = "Passed",
+          children = {
+            {
+              name = "Test target",
+              nodeType = "Unit test bundle",
+              result = "Passed",
+              children = {
+                {
+                  name = "Test",
+                  nodeType = "Test Case",
+                  result = "Passed",
+                  children = {},
+                },
+              },
+            },
+          },
+        },
+        {
+          name = "Test Plan 2",
+          nodeType = "Test Plan",
+          result = "Failed",
+          children = {
+            {
+              name = "Test target 2",
+              nodeType = "Unit test bundle",
+              result = "Failed",
+              children = {
+                {
+                  name = "Test Suite 2",
+                  nodeType = "Test Suite",
+                  result = "Failed",
+                  children = {
+                    {
+                      name = "Test",
+                      nodeType = "Test Case",
+                      result = "Failed",
+                      children = {},
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+      sut.show(results)
+
+      assert.are.same({
+        " [] Test Plan 1",
+        " [] Test Plan 2",
+      }, tree_content())
+
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+      invoke_keymap("l")
+
+      assert.are.same({
+        " [] Test Plan 1",
+        "   [] Test target",
+        " [] Test Plan 2",
+      }, tree_content())
+
+      vim.api.nvim_win_set_cursor(0, { 2, 0 })
+      invoke_keymap("l")
+
+      assert.are.same({
+        " [] Test Plan 1",
+        "   [] Test target",
+        "      [] Test",
+        " [] Test Plan 2",
+      }, tree_content())
+
+      vim.api.nvim_win_set_cursor(0, { 4, 0 })
+      invoke_keymap("L")
+
+      assert.are.same({
+        " [] Test Plan 1",
+        "   [] Test target",
+        "      [] Test",
+        " [] Test Plan 2",
+        "   [] Test target 2",
+        "     [] Test Suite 2",
+        "        [] Test",
+      }, tree_content())
+
+      invoke_keymap("H")
+
+      assert.are.same({
+        " [] Test Plan 1",
+        " [] Test Plan 2",
+      }, tree_content())
+    end)
+  end)
 end)
