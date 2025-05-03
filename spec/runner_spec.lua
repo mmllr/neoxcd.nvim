@@ -365,6 +365,7 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
                 {
                   name = "Test",
                   nodeType = "Test Case",
+                  nodeIdentifier = "Test/testSomething()",
                   result = "Passed",
                   children = {},
                 },
@@ -390,6 +391,7 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
                     {
                       name = "Test",
                       nodeType = "Test Case",
+                      nodeIdentifier = "Test Suite2/testSomething()",
                       result = "Failed",
                       children = {},
                     },
@@ -457,6 +459,18 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
           " [] Test Plan 1",
           " [] Test Plan 2",
         }, tree_content())
+      end)
+
+      it("can run test cases", function()
+        local project = require("neoxcd")
+        local invoked
+
+        project.test = function(id)
+          invoked = id
+        end
+        invoke_keymap("L", 1)
+        invoke_keymap("r", 3)
+        assert.are.equal("Test target/Test/testSomething()", invoked)
       end)
     end)
   end)
