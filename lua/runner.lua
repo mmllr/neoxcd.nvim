@@ -6,9 +6,6 @@ local nio = require("nio")
 
 local M = {}
 
----@type NuiTree?
-local tree = nil
-
 ---@type table<string, string>
 local symbols = {
   ["Unit test bundle"] = "╮",
@@ -480,7 +477,7 @@ function M.show(results)
   end
   split:show()
 
-  tree = NuiTree({
+  local tree = NuiTree({
     bufnr = split.bufnr,
     nodes = nodes,
     prepare_node = function(node)
