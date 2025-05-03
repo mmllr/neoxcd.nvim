@@ -411,7 +411,7 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
         }, tree_content())
       end)
 
-      it("can expand nodes", function()
+      it("can expand and collapse nodes", function()
         invoke_keymap("l", 1)
 
         assert.are.same({
@@ -426,6 +426,14 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
           " [] Test Plan 1",
           "   [] Test target",
           "      [] Test",
+          " [] Test Plan 2",
+        }, tree_content())
+
+        invoke_keymap("h", 2)
+
+        assert.are.same({
+          " [] Test Plan 1",
+          "   [] Test target",
           " [] Test Plan 2",
         }, tree_content())
       end)
