@@ -1,7 +1,15 @@
 local assert = require("luassert")
 
 describe("Util", function()
-  local util = require("util")
+  local util
+
+  setup(function()
+    util = require("util")
+  end)
+
+  teardown(function()
+    util = nil
+  end)
 
   it("Concatenates two tables", function()
     local lhs = { "a", "b", "c" }

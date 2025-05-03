@@ -7,11 +7,19 @@ local helpers = require("spec/helpers")
 describe("neoxcd plugin", function()
   local nio = require("nio")
   local it = nio.tests.it
-  local project = require("project")
+  local sut
   ---@type table<string, StubbedCommand>
   local stubbed_commands = {}
   local files = {}
   local written_files = {}
+
+  setup(function()
+    sut = require("project")
+  end)
+
+  teardown(function()
+    sut = nil
+  end)
 
   ---@param type ProjectType
   ---@param scheme string|nil
@@ -19,7 +27,7 @@ describe("neoxcd plugin", function()
   ---@param destination Destination|nil
   ---@param destinations Destination[]|nil
   local function givenProject(type, scheme, schemes, destination, destinations)
-    project.current_project = {
+    sut.current_project = {
       type = type,
       path = type == "project" and "project.xcodeproj" or "project.xcworkspace",
       destination = destination,
@@ -35,7 +43,7 @@ describe("neoxcd plugin", function()
   ---@param name string|nil
   local function givenTarget(path, bundle_id, name)
     local n = name or "TestApp"
-    project.current_target = {
+    sut.current_target = {
       app_path = path,
       bundle_id = bundle_id,
       name = n,
@@ -52,8 +60,8 @@ describe("neoxcd plugin", function()
       read_file = helpers.stub_file_read(files),
       write_file = helpers.stub_file_write(written_files),
     })
-    project.current_project = nil
-    project.current_target = nil
+    sut.current_project = nil
+    sut.current_target = nil
     util.get_cwd = function()
       return "/path/cwd"
     end
@@ -69,10 +77,6 @@ describe("neoxcd plugin", function()
   local function stub_external_cmd(code, stubbed_cmd, output)
     stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = false }
   end
-
-  teardown(function()
-    project = nil
-  end)
 
   describe("Scheme handling", function()
     describe("Xcode workspace", function()
@@ -121,12 +125,12 @@ describe("neoxcd plugin", function()
       end)
 
       it("successfully parses the output", function()
-        assert.are.same(project.ProjectResult.SUCCESS, project.load_schemes())
-        assert.are.same(expected, project.current_project.schemes)
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.load_schemes())
+        assert.are.same(expected, sut.current_project.schemes)
       end)
 
       it("writes the project with the schemes to the neoxcd folder", function()
-        assert.are.same(project.ProjectResult.SUCCESS, project.load_schemes())
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.load_schemes())
         assert.are.same({
           type = "workspace",
           path = "project.xcworkspace",
@@ -164,13 +168,13 @@ describe("neoxcd plugin", function()
         stub_external_cmd(0, { "xcodebuild", "-list", "-json", "-project", "project.xcodeproj" }, json)
       end)
       it("loads the schemes from the output", function()
-        assert.are.same(0, project.load_schemes())
+        assert.are.same(0, sut.load_schemes())
 
-        assert.are.same(expected, project.current_project.schemes)
+        assert.are.same(expected, sut.current_project.schemes)
       end)
 
       it("writes the project with the schemes to the neoxcd folder", function()
-        assert.are.same(0, project.load_schemes())
+        assert.are.same(0, sut.load_schemes())
         assert.are.same({
           type = "project",
           path = "project.xcodeproj",
@@ -187,13 +191,13 @@ describe("neoxcd plugin", function()
       end)
 
       it("will update the scheme in the project", function()
-        assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
-        assert.are.same("schemeB", project.current_project.scheme)
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.select_scheme("schemeB"))
+        assert.are.same("schemeB", sut.current_project.scheme)
         assert.are.same("schemeB", vim.g.neoxcd_scheme)
       end)
 
       it("will write the selected scheme to the neoxcd folder", function()
-        assert.are.same(project.ProjectResult.SUCCESS, project.select_scheme("schemeB"))
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.select_scheme("schemeB"))
         assert.are.same({
           type = "project",
           path = "project.xcodeproj",
@@ -205,18 +209,18 @@ describe("neoxcd plugin", function()
 
     it("Will not update the xcode build server when selecting the same scheme", function()
       givenProject("project", "schemeA", { "schemeA", "SchemeB", "schemeC" })
-      local result = project.select_scheme("schemeA")
+      local result = sut.select_scheme("schemeA")
 
-      assert.are.same(project.ProjectResult.SUCCESS, result)
-      assert.are.same("schemeA", project.current_project.scheme)
+      assert.are.same(sut.ProjectResult.SUCCESS, result)
+      assert.are.same("schemeA", sut.current_project.scheme)
     end)
 
     it("Will not update the xcode build server for Swift packages", function()
       givenProject("package", nil, { "schemeA", "SchemeB", "schemeC" })
-      local result = project.select_scheme("schemeA")
+      local result = sut.select_scheme("schemeA")
 
-      assert.are.same(project.ProjectResult.SUCCESS, result)
-      assert.are.same("schemeA", project.current_project.scheme)
+      assert.are.same(sut.ProjectResult.SUCCESS, result)
+      assert.are.same("schemeA", sut.current_project.scheme)
     end)
   end)
 
@@ -331,8 +335,8 @@ describe("neoxcd plugin", function()
           platform = "iOS Simulator",
         },
       }
-      assert.are.same(project.ProjectResult.SUCCESS, project.load_destinations())
-      assert.are.same(expected, project.destinations())
+      assert.are.same(sut.ProjectResult.SUCCESS, sut.load_destinations())
+      assert.are.same(expected, sut.destinations())
       assert.are.same(
         { testScheme = expected },
         vim.json.decode(written_files["/path/cwd/.neoxcd/destinations.json"], { luanil = { object = true, array = true } })
@@ -413,19 +417,19 @@ describe("neoxcd plugin", function()
     }
 
     ---@type Project
-    project.current_project = {
+    sut.current_project = {
       path = "project.xcodeproj",
       type = "project",
       scheme = "testScheme",
       schemes = { "testScheme" },
       tests = {},
     }
-    project.load_destinations()
-    project.select_scheme("testScheme")
+    sut.load_destinations()
+    sut.select_scheme("testScheme")
 
     for i, d in ipairs(destinations) do
-      project.select_destination(i)
-      assert.are.same(d, project.current_project.destination)
+      sut.select_destination(i)
+      assert.are.same(d, sut.current_project.destination)
       local saved = vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"])
       assert.are.same(d, saved.destination)
       assert.are.same(util.format_destination(d), vim.g.neoxcd_destination)
@@ -436,7 +440,7 @@ describe("neoxcd plugin", function()
     givenProject("project", "testScheme")
     stub_external_cmd(0, { "xcode-select", "-p" }, "/Applications/Xcode-16.2.app/Contents/Developer")
     stub_external_cmd(0, { "open", "/Applications/Xcode-16.2.app", "project.xcodeproj" }, "")
-    assert.are.same(project.ProjectResult.SUCCESS, project.open_in_xcode())
+    assert.are.same(sut.ProjectResult.SUCCESS, sut.open_in_xcode())
   end)
 
   it("Running a target on simulator with no simulator booted", function()
@@ -462,7 +466,7 @@ describe("neoxcd plugin", function()
       "com.test.TestApp",
     }, "")
 
-    assert.are.same(project.ProjectResult.SUCCESS, project.run())
+    assert.are.same(sut.ProjectResult.SUCCESS, sut.run())
   end)
 
   it("Running a target on macOS", function()
@@ -476,7 +480,7 @@ describe("neoxcd plugin", function()
     givenProject("project", "testScheme", {}, mac_dest)
     givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
     stub_external_cmd(0, { "open", "/path/to/build/TestApp.app" }, "")
-    assert.are.same(project.ProjectResult.SUCCESS, project.run())
+    assert.are.same(sut.ProjectResult.SUCCESS, sut.run())
   end)
 
   it("Stopping a running macOS app", function()
@@ -492,7 +496,7 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "pgrep", "AppName" }, "42")
     stub_external_cmd(0, { "kill", "-9", "42" }, "")
 
-    assert.are.same(project.ProjectResult.SUCCESS, project.stop())
+    assert.are.same(sut.ProjectResult.SUCCESS, sut.stop())
   end)
 
   it("Stopping a running simulator app", function()
@@ -507,7 +511,7 @@ describe("neoxcd plugin", function()
     stub_external_cmd(0, { "pgrep", "AppName" }, "42\n\n")
     stub_external_cmd(0, { "kill", "-9", "42" }, "")
 
-    assert.are.same(project.ProjectResult.SUCCESS, project.stop())
+    assert.are.same(sut.ProjectResult.SUCCESS, sut.stop())
   end)
 
   describe("Debugging", function()
@@ -535,7 +539,7 @@ describe("neoxcd plugin", function()
       givenProject("project", "testScheme", {}, mac_dest)
       givenTarget("/path/to/build/TestApp.app", "com.test.TestApp")
 
-      assert.are.same(project.ProjectResult.SUCCESS, project.debug())
+      assert.are.same(sut.ProjectResult.SUCCESS, sut.debug())
       assert.are.same({
         name = "macOS Debugger",
         type = "lldb",
@@ -574,7 +578,7 @@ describe("neoxcd plugin", function()
         "com.test.TestApp",
       }, "")
 
-      assert.are.same(project.ProjectResult.SUCCESS, project.debug())
+      assert.are.same(sut.ProjectResult.SUCCESS, sut.debug())
 
       assert.are.same({
         {
@@ -682,7 +686,7 @@ describe("neoxcd plugin", function()
         "project.xcodeproj",
       }, "")
 
-      assert.are.same(project.ProjectResult.SUCCESS, project.discover_tests())
+      assert.are.same(sut.ProjectResult.SUCCESS, sut.discover_tests())
       ---@type TestNode[]
       local expected = {
         {
@@ -720,7 +724,7 @@ describe("neoxcd plugin", function()
         },
       }
 
-      assert.are.same(expected, project.current_project.test_results)
+      assert.are.same(expected, sut.current_project.test_results)
     end)
 
     it("Runs test", function()
@@ -816,7 +820,7 @@ describe("neoxcd plugin", function()
       )
       stub_external_cmd(0, { "fd", "^TestSuite.swift" }, "/cwd/TestSuite.swift\n")
 
-      assert.are.same(project.ProjectResult.SUCCESS, project.run_tests())
+      assert.are.same(sut.ProjectResult.SUCCESS, sut.run_tests())
       assert.are.same(
         ---@type TestNode[]
         {
@@ -863,7 +867,7 @@ describe("neoxcd plugin", function()
             },
           },
         },
-        project.current_project.test_results
+        sut.current_project.test_results
       )
       assert.are.same({
         ---@type QuickfixEntry
@@ -873,7 +877,7 @@ describe("neoxcd plugin", function()
           text = "Issue recorded: A state change does not match expectation: …\n\nFailure description\n\nMore text\n\nEven more",
           type = "E",
         },
-      }, project.current_project.quickfixes)
+      }, sut.current_project.quickfixes)
     end)
 
     it("Adds build failure messages to the quickfixes", function()
@@ -936,7 +940,7 @@ describe("neoxcd plugin", function()
       ]]
       )
 
-      assert.are.same(project.ProjectResult.BUILD_FAILED, project.run_tests())
+      assert.are.same(sut.ProjectResult.BUILD_FAILED, sut.run_tests())
       assert.are.same({
         ---@type QuickfixEntry
         {
@@ -946,7 +950,7 @@ describe("neoxcd plugin", function()
           text = "'s' is not a valid digit in integer literal",
           type = "E",
         },
-      }, project.current_project.quickfixes)
+      }, sut.current_project.quickfixes)
     end)
   end)
 
@@ -959,7 +963,7 @@ describe("neoxcd plugin", function()
         return { "AFile.swift", "hello.rs", "file.c" }
       end
 
-      assert.are.same(project.ProjectResult.NO_PROJECT, project.load())
+      assert.are.same(sut.ProjectResult.NO_PROJECT, sut.load())
     end)
 
     describe("Folders containing a Xcode project", function()
@@ -998,21 +1002,18 @@ describe("neoxcd plugin", function()
           assert.are.same("/path/cwd", path)
           return { "Package.swift", "project.xcodeproj" }
         end
-        assert.are.same(project.ProjectResult.SUCCESS, project.load())
-        assert.are.same(
-          { path = "project.xcodeproj", type = "project", schemes = {}, destinations = {}, tests = {} },
-          project.current_project
-        )
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.load())
+        assert.are.same({ path = "project.xcodeproj", type = "project", schemes = {}, destinations = {}, tests = {} }, sut.current_project)
       end)
 
       it("Loads a workspace", function()
         util.list_files = function()
           return { "Package.swift", "project.xcodeproj", "project.xcworkspace" }
         end
-        assert.are.same(project.ProjectResult.SUCCESS, project.load())
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.load())
         assert.are.same(
           { path = "project.xcworkspace", type = "workspace", schemes = {}, destinations = {}, tests = {} },
-          project.current_project
+          sut.current_project
         )
       end)
 
@@ -1020,12 +1021,12 @@ describe("neoxcd plugin", function()
         util.list_files = function()
           return { "Package.swift" }
         end
-        assert.are.same(project.ProjectResult.SUCCESS, project.load())
-        assert.are.same({ path = "Package.swift", type = "package", schemes = {}, destinations = {}, tests = {} }, project.current_project)
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.load())
+        assert.are.same({ path = "Package.swift", type = "package", schemes = {}, destinations = {}, tests = {} }, sut.current_project)
       end)
 
       it("Loads a saved project", function()
-        project.current_project = nil
+        sut.current_project = nil
         files["/path/cwd/.neoxcd/project.json"] = [[
         {
           "scheme": "SchemeA",
@@ -1044,7 +1045,7 @@ describe("neoxcd plugin", function()
         }
         ]]
 
-        assert.are.same(project.ProjectResult.SUCCESS, project.load())
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.load())
         assert.are.same({
           name = "",
           path = "/the/path/to/the/project.xcodeproj",
@@ -1056,7 +1057,7 @@ describe("neoxcd plugin", function()
             name = "iPhone 16 Pro",
           },
           schemes = { "SchemeA", "SchemeB", "SchemeC" },
-        }, project.current_project)
+        }, sut.current_project)
         assert.are.same({
           {
             id = "deadbeef-deadbeefdeadbeef",
@@ -1068,18 +1069,18 @@ describe("neoxcd plugin", function()
             name = "PhoneHome",
             platform = "iOS",
           },
-        }, project.destinations())
+        }, sut.destinations())
 
-        project.current_project.scheme = "SchemeB"
+        sut.current_project.scheme = "SchemeB"
         assert.are.same({
           {
             id = "deadbeef-deadbeefdeadbeef",
             name = "My Mac",
             platform = "macOS",
           },
-        }, project.destinations())
+        }, sut.destinations())
         assert.are.same("SchemeA", vim.g.neoxcd_scheme)
-        assert.are.same(util.format_destination(project.current_project.destination), vim.g.neoxcd_destination)
+        assert.are.same(util.format_destination(sut.current_project.destination), vim.g.neoxcd_destination)
       end)
     end)
   end)
