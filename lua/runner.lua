@@ -319,8 +319,6 @@ local function find_symbol(symbol, parent)
     if file_path and line_number then
       -- Open the file at the specified line number
       nio.api.nvim_command("wincmd h | e +" .. line_number .. " " .. file_path)
-    else
-      print("No match found")
     end
   end
 end
