@@ -294,7 +294,7 @@ end
 
 ---@async
 ---@param symbol string
----@param parent string|nil
+---@param parent? string
 local function find_symbol(symbol, parent)
   local test_name = symbol:match("^[^(]+") or symbol
   local cmd = {

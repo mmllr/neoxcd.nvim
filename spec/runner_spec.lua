@@ -1,4 +1,5 @@
 local assert = require("luassert")
+local helpers = require("spec/helpers")
 
 describe("Test runner", function()
   local sut
@@ -316,6 +317,7 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
       return vim.api.nvim_buf_get_lines(0, 0, -1, true)
     end
 
+    ---@async
     ---@param keymap string
     ---@param line? integer
     local function invoke_keymap(keymap, line)
@@ -325,10 +327,11 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
       local keymaps = vim.api.nvim_buf_get_keymap(tree_buf_nr(), "n")
       for _, mapping in ipairs(keymaps) do
         if mapping.lhs == keymap and mapping.callback then
-          local ok, err = pcall(mapping.callback, mapping.lhs)
+          local _, err = pcall(mapping.callback, mapping.lhs)
 
-          assert.is_true(ok)
-          assert.is_nil(err)
+          if err then
+            error(err)
+          end
           return
         end
       end
@@ -363,11 +366,25 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
               result = "Passed",
               children = {
                 {
-                  name = "Test",
+                  name = "testSomething()",
                   nodeType = "Test Case",
                   nodeIdentifier = "Test/testSomething()",
                   result = "Passed",
                   children = {},
+                },
+                {
+                  name = "TestSuite",
+                  nodeType = "Test Suite",
+                  result = "Passed",
+                  children = {
+                    {
+                      name = "testSomething2()",
+                      nodeType = "Test Case",
+                      nodeIdentifier = "TestSuite/testSomething()",
+                      result = "Passed",
+                      children = {},
+                    },
+                  },
                 },
               },
             },
@@ -384,7 +401,7 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
               result = "Failed",
               children = {
                 {
-                  name = "Test Suite 2",
+                  name = "TestSuite2",
                   nodeType = "Test Suite",
                   result = "Failed",
                   children = {
@@ -427,7 +444,8 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
         assert.are.same({
           " [] Test Plan 1",
           "   [] Test target",
-          "      [] Test",
+          "      [] testSomething()",
+          "     [] TestSuite",
           " [] Test Plan 2",
         }, tree_content())
 
@@ -446,10 +464,12 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
         assert.are.same({
           " [] Test Plan 1",
           "   [] Test target",
-          "      [] Test",
+          "      [] testSomething()",
+          "     [] TestSuite",
+          "        [] testSomething2()",
           " [] Test Plan 2",
           "   [] Test target 2",
-          "     [] Test Suite 2",
+          "     [] TestSuite2",
           "        [] Test",
         }, tree_content())
 
@@ -463,14 +483,75 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
 
       it("can run test cases", function()
         local project = require("neoxcd")
-        local invoked
+        stub(project, "test")
 
-        project.test = function(id)
-          invoked = id
-        end
         invoke_keymap("L", 1)
         invoke_keymap("r", 3)
-        assert.are.equal("Test target/Test/testSomething()", invoked)
+
+        assert.stub(project.test).was.called_with("Test target/Test/testSomething()")
+      end)
+
+      describe("opening tests in editor", function()
+        ---@type table<string, StubbedCommand>
+        local stubbed_commands = {}
+        local files = {}
+        local written_files = {}
+        local util = require("util")
+
+        setup(function()
+          stubbed_commands = {}
+          util.setup({
+            run_cmd = helpers.setup_run_cmd(stubbed_commands),
+            read_file = helpers.stub_file_read(files),
+            write_file = helpers.stub_file_write(written_files),
+          })
+        end)
+        after_each(function()
+          assert.are.same(stubbed_commands, {}, "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands))
+        end)
+
+        it("can open a test case not contained in a suite", function()
+          local output = [[
+project-kit/Tests/FeatureTests/FeatureTest.swift:10:    struct TheTest {
+project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigation() async throws {"
+]]
+          helpers.stub_external_cmd(stubbed_commands, 0, {
+            "rg",
+            "-t",
+            "swift",
+            "--multiline-dotall",
+            "--line-number",
+            "func\\s+testSomething",
+          }, output)
+          stub(nio.api, "nvim_command")
+          invoke_keymap("L", 1)
+
+          invoke_keymap("<CR>", 3)
+
+          assert.stub(nio.api.nvim_command).was.called_with("wincmd h | e +16 project-kit/Tests/FeatureTests/FeatureTest.swift")
+        end)
+
+        it("can open a test case in a suite", function()
+          local output = [[
+project/Tests/FeatureTests/FeatureTest.swift:20:    struct TestSuite {
+project/Tests/TestTarget/TestSuite.swift:42:    @Test func testSomething2() async throws {"
+]]
+          helpers.stub_external_cmd(stubbed_commands, 0, {
+            "rg",
+            "-t",
+            "swift",
+            "--multiline-dotall",
+            "--line-number",
+            "-U",
+            "TestSuite.*testSomething2",
+          }, output)
+          stub(nio.api, "nvim_command")
+          invoke_keymap("L", 1)
+
+          invoke_keymap("<CR>", 5)
+
+          assert.stub(nio.api.nvim_command).was.called_with("wincmd h | e +42 project/Tests/TestTarget/TestSuite.swift")
+        end)
       end)
     end)
   end)

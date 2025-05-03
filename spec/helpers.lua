@@ -12,7 +12,7 @@ return {
   setup_run_cmd = function(stubbed_commands)
     return function(cmd, on_stdout, on_exit)
       local key = table.concat(cmd, " ")
-      assert.is.is_not_nil(stubbed_commands[key], "Expected to find " .. key .. " in stubbed commands")
+      assert.is.is_not_nil(stubbed_commands[key], "Expected to find\n" .. key .. "\nin stubbed commands")
       if stubbed_commands[key].use_on_stdout then
         for line in string.gmatch(stubbed_commands[key].output, "[^\r\n]+") do
           on_stdout(nil, line)
@@ -58,5 +58,13 @@ return {
       files[path] = content
       return true
     end
+  end,
+
+  ---@param cmds table<string, StubbedCommand>
+  ---@param code number|number[]
+  ---@param stubbed_cmd string[]
+  ---@param output string
+  stub_external_cmd = function(cmds, code, stubbed_cmd, output)
+    cmds[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = false }
   end,
 }
