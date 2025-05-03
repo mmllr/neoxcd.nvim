@@ -1,9 +1,17 @@
 local assert = require("luassert")
 
 describe("Test runner", function()
-  local sut = require("runner")
+  local sut
   local nio = require("nio")
   local it = nio.tests.it
+
+  setup(function()
+    sut = require("runner")
+  end)
+
+  teardown(function()
+    sut = nil
+  end)
 
   it("Parses test node identifiers", function()
     local class_name, method_name = sut.get_class_and_method("Test/testSomething")
@@ -299,16 +307,21 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
     ---@return integer
     local function tree_buf_nr()
       local wins = vim.api.nvim_list_wins()
+      assert.are.equal(2, #wins)
       return vim.api.nvim_win_get_buf(wins[#wins])
     end
 
     ---@return string[]
     local function tree_content()
-      return vim.api.nvim_buf_get_lines(tree_buf_nr(), 0, -1, false)
+      return vim.api.nvim_buf_get_lines(0, 0, -1, true)
     end
 
     ---@param keymap string
-    local function invoke_keymap(keymap)
+    ---@param line? integer
+    local function invoke_keymap(keymap, line)
+      if line then
+        vim.api.nvim_win_set_cursor(0, { line, 0 })
+      end
       local keymaps = vim.api.nvim_buf_get_keymap(tree_buf_nr(), "n")
       for _, mapping in ipairs(keymaps) do
         if mapping.lhs == keymap and mapping.callback then
@@ -331,10 +344,12 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
     end)
 
     it("show command with no tests", function()
+      sut.show({})
+
       assert.are.same({ "  No tests found" }, tree_content())
     end)
 
-    it("show command with tests", function()
+    describe("show command with tests", function()
       ---@type TestNode[]
       local results = {
         {
@@ -385,51 +400,56 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
           },
         },
       }
-      sut.show(results)
+      setup(function()
+        sut.show(results)
+      end)
 
-      assert.are.same({
-        " [] Test Plan 1",
-        " [] Test Plan 2",
-      }, tree_content())
+      it("initial content is unexpanded", function()
+        assert.are.same({
+          " [] Test Plan 1",
+          " [] Test Plan 2",
+        }, tree_content())
+      end)
 
-      vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      invoke_keymap("l")
+      it("can expand nodes", function()
+        invoke_keymap("l", 1)
 
-      assert.are.same({
-        " [] Test Plan 1",
-        "   [] Test target",
-        " [] Test Plan 2",
-      }, tree_content())
+        assert.are.same({
+          " [] Test Plan 1",
+          "   [] Test target",
+          " [] Test Plan 2",
+        }, tree_content())
 
-      vim.api.nvim_win_set_cursor(0, { 2, 0 })
-      invoke_keymap("l")
+        invoke_keymap("l", 2)
 
-      assert.are.same({
-        " [] Test Plan 1",
-        "   [] Test target",
-        "      [] Test",
-        " [] Test Plan 2",
-      }, tree_content())
+        assert.are.same({
+          " [] Test Plan 1",
+          "   [] Test target",
+          "      [] Test",
+          " [] Test Plan 2",
+        }, tree_content())
+      end)
 
-      vim.api.nvim_win_set_cursor(0, { 4, 0 })
-      invoke_keymap("L")
+      it("can expand and collapse all nodes", function()
+        invoke_keymap("L", 1)
 
-      assert.are.same({
-        " [] Test Plan 1",
-        "   [] Test target",
-        "      [] Test",
-        " [] Test Plan 2",
-        "   [] Test target 2",
-        "     [] Test Suite 2",
-        "        [] Test",
-      }, tree_content())
+        assert.are.same({
+          " [] Test Plan 1",
+          "   [] Test target",
+          "      [] Test",
+          " [] Test Plan 2",
+          "   [] Test target 2",
+          "     [] Test Suite 2",
+          "        [] Test",
+        }, tree_content())
 
-      invoke_keymap("H")
+        invoke_keymap("H")
 
-      assert.are.same({
-        " [] Test Plan 1",
-        " [] Test Plan 2",
-      }, tree_content())
+        assert.are.same({
+          " [] Test Plan 1",
+          " [] Test Plan 2",
+        }, tree_content())
+      end)
     end)
   end)
 end)
