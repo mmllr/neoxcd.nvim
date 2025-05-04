@@ -492,11 +492,32 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
       end)
 
       describe("opening tests in editor", function()
+        local output = [[
+project/Tests/FeatureTests/TestSuite.swift:20:    struct TestSuite {
+project/Tests/TestTarget/TestSuite.swift:42:    @Test func testSomething2() async throws {"
+]]
         ---@type table<string, StubbedCommand>
         local stubbed_commands = {}
         local files = {}
         local written_files = {}
         local util = require("util")
+
+        ---@param term string
+        ---@param multiline boolean
+        local function given_rg(term, multiline)
+          local cmd = {
+            "rg",
+            "-t",
+            "swift",
+            "--multiline-dotall",
+            "--line-number",
+          }
+          if multiline then
+            table.insert(cmd, "-U")
+          end
+          table.insert(cmd, term)
+          helpers.stub_external_cmd(stubbed_commands, 0, cmd, output)
+        end
 
         setup(function()
           stubbed_commands = {}
@@ -505,48 +526,27 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
             read_file = helpers.stub_file_read(files),
             write_file = helpers.stub_file_write(written_files),
           })
+          stub(nio.api, "nvim_command")
         end)
+
+        before_each(function()
+          invoke_keymap("L", 1)
+        end)
+
         after_each(function()
           assert.are.same(stubbed_commands, {}, "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands))
         end)
 
         it("can open a test case not contained in a suite", function()
-          local output = [[
-project-kit/Tests/FeatureTests/FeatureTest.swift:10:    struct TheTest {
-project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigation() async throws {"
-]]
-          helpers.stub_external_cmd(stubbed_commands, 0, {
-            "rg",
-            "-t",
-            "swift",
-            "--multiline-dotall",
-            "--line-number",
-            "func\\s+testSomething",
-          }, output)
-          stub(nio.api, "nvim_command")
-          invoke_keymap("L", 1)
+          given_rg("func\\s+testSomething", false)
 
           invoke_keymap("<CR>", 3)
 
-          assert.stub(nio.api.nvim_command).was.called_with("wincmd h | e +16 project-kit/Tests/FeatureTests/FeatureTest.swift")
+          assert.stub(nio.api.nvim_command).was.called_with("wincmd h | e +42 project/Tests/TestTarget/TestSuite.swift")
         end)
 
         it("can open a test case in a suite", function()
-          local output = [[
-project/Tests/FeatureTests/FeatureTest.swift:20:    struct TestSuite {
-project/Tests/TestTarget/TestSuite.swift:42:    @Test func testSomething2() async throws {"
-]]
-          helpers.stub_external_cmd(stubbed_commands, 0, {
-            "rg",
-            "-t",
-            "swift",
-            "--multiline-dotall",
-            "--line-number",
-            "-U",
-            "TestSuite.*testSomething2",
-          }, output)
-          stub(nio.api, "nvim_command")
-          invoke_keymap("L", 1)
+          given_rg("TestSuite.*testSomething2", true)
 
           invoke_keymap("<CR>", 5)
 
