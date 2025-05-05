@@ -305,8 +305,12 @@ local function find_symbol(symbol, parent)
     "--line-number",
   }
   if parent ~= nil then
-    table.insert(cmd, "-U")
-    table.insert(cmd, parent .. ".*" .. test_name)
+    if parent == "neoxcd-test-suite-placeholder" then
+      table.insert(cmd, symbol)
+    else
+      table.insert(cmd, "-U")
+      table.insert(cmd, parent .. ".*" .. test_name)
+    end
   else
     table.insert(cmd, "func\\s+" .. test_name)
   end
@@ -350,13 +354,17 @@ end
 ---@return string|nil
 ---@return string|nil
 local function find_node_symbol_names(node, tree)
-  if node.test_node and node.test_node.nodeType == "Test Case" then
-    local parent = find_parent_test_node(node, "Test Suite", tree)
-    return node.test_node.name, parent and parent.test_node and parent.test_node.name or nil
-  else
-    local parent = find_parent_test_node(node, "Test Case", tree)
-    if parent ~= nil then
-      return find_node_symbol_names(parent, tree)
+  if node.test_node then
+    if node.test_node.nodeType == "Test Case" then
+      local parent = find_parent_test_node(node, "Test Suite", tree)
+      return node.test_node.name, parent and parent.test_node and parent.test_node.name or nil
+    elseif node.test_node.nodeType == "Test Suite" then
+      return node.test_node.name, nil
+    else
+      local parent = find_parent_test_node(node, "Test Case", tree)
+      if parent ~= nil then
+        return find_node_symbol_names(parent, tree)
+      end
     end
     return nil, nil
   end
@@ -377,6 +385,10 @@ local function configure_split(tree)
       local node = tree:get_node()
       if node then
         local test, parent = find_node_symbol_names(node, tree)
+        if not parent then
+          -- TODO: This is a workaround for the test suite placeholder
+          parent = node.test_node and node.test_node.nodeType == "Test Suite" and "neoxcd-test-suite-placeholder" or nil
+        end
         if test then
           find_symbol(test, parent)
         end

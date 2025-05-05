@@ -492,7 +492,7 @@ project-kit/Tests/FeatureTests/FeatureTest.swift:16:    @Test func testNavigatio
       end)
 
       describe("opening tests in editor", function()
-        local output = [[
+        local rg_output = [[
 project/Tests/FeatureTests/TestSuite.swift:20:    struct TestSuite {
 project/Tests/TestTarget/TestSuite.swift:42:    @Test func testSomething2() async throws {"
 ]]
@@ -504,7 +504,8 @@ project/Tests/TestTarget/TestSuite.swift:42:    @Test func testSomething2() asyn
 
         ---@param term string
         ---@param multiline boolean
-        local function given_rg(term, multiline)
+        ---@param output string
+        local function given_rg(term, multiline, output)
           local cmd = {
             "rg",
             "-t",
@@ -538,7 +539,7 @@ project/Tests/TestTarget/TestSuite.swift:42:    @Test func testSomething2() asyn
         end)
 
         it("can open a test case not contained in a suite", function()
-          given_rg("func\\s+testSomething", false)
+          given_rg("func\\s+testSomething", false, rg_output)
 
           invoke_keymap("<CR>", 3)
 
@@ -546,9 +547,17 @@ project/Tests/TestTarget/TestSuite.swift:42:    @Test func testSomething2() asyn
         end)
 
         it("can open a test case in a suite", function()
-          given_rg("TestSuite.*testSomething2", true)
+          given_rg("TestSuite.*testSomething2", true, rg_output)
 
           invoke_keymap("<CR>", 5)
+
+          assert.stub(nio.api.nvim_command).was.called_with("wincmd h | e +42 project/Tests/TestTarget/TestSuite.swift")
+        end)
+
+        it("can open a suite", function()
+          given_rg("TestSuite", false, rg_output)
+
+          invoke_keymap("<CR>", 4)
 
           assert.stub(nio.api.nvim_command).was.called_with("wincmd h | e +42 project/Tests/TestTarget/TestSuite.swift")
         end)
