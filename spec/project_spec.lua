@@ -264,6 +264,7 @@ describe("neoxcd plugin", function()
         { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" },
         output
       )
+      ---@type Destination[]
       local expected = {
         { platform = "macOS", arch = "arm64e", id = "deadbeef-deadbeefdeadbeef", name = "My Mac" },
         {

@@ -12,6 +12,7 @@ local M = {}
 ---| 'visionOS Simulator' # visionOS simulator (Apple Glasses)
 ---| 'visionOS' # visionOS device (Apple Glasses)
 ---| 'macOS' # macOS
+---| 'DriverKit'
 
 ---Platform constants.
 ---@class PlatformConstants
@@ -63,7 +64,7 @@ M.Architecture = {
 ---@field platform Platform
 ---@field arch? Architecture
 ---@field variant? string
----@field id string
+---@field id? string
 ---@field name string
 ---@field OS? string
 
