@@ -12,24 +12,21 @@ local subcommand_tbl = {
   },
   build = {
     impl = function(args, opts)
-      require("neoxcd").build()
-      -- Implementation
+      require("neoxcd").build(vim.list_contains(args, "testing") or false)
     end,
-    -- complete = function(subcmd_arg_lead)
-    --     -- Simplified example
-    --     local install_args = {
-    --         "neorg",
-    --         "rest.nvim",
-    --         "rustaceanvim",
-    --     }
-    --     return vim.iter(install_args)
-    --         :filter(function(install_arg)
-    --             -- If the user has typed `:Rocks install ne`,
-    --             -- this will match 'neorg'
-    --             return install_arg:find(subcmd_arg_lead) ~= nil
-    --         end)
-    --         :totable()
-    -- end,
+    complete = function(subcmd_arg_lead)
+      local install_args = {
+        "testing",
+      }
+      return vim
+        .iter(install_args)
+        :filter(function(install_arg)
+          -- If the user has typed `:Neoxcd build te`,
+          -- this will match 'testing'
+          return install_arg:find(subcmd_arg_lead) ~= nil
+        end)
+        :totable()
+    end,
     -- ...
   },
   clean = {

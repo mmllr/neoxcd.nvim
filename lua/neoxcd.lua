@@ -86,10 +86,11 @@ end
 
 ---Builds the project
 ---@async
-local function build()
+---@param forTesting boolean If true, builds for testing
+local function build(forTesting)
   local start_time = os.time()
-  spinner.start("Building project...")
-  local code = xcode.build()
+  spinner.start(forTesting and "Build for testing..." or "Building project...")
+  local code = xcode.build(forTesting or nil)
   nio.scheduler()
   spinner.stop()
   if code == 0 then
@@ -121,7 +122,7 @@ end
 ---@class Neoxcd
 ---@field setup fun(options: table)
 ---@field clean fun()
----@field build fun()
+---@field build fun(forTesting: boolean)
 ---@field select_schemes fun()
 ---@field select_destination fun()
 ---@field run fun()
@@ -151,7 +152,7 @@ return {
     end)
   end,
   clean = nio.create(clean),
-  build = nio.create(build),
+  build = nio.create(build, 1),
   select_schemes = nio.create(select_schemes),
   select_destination = nio.create(select_destination),
   run = nio.create(function()

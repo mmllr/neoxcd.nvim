@@ -126,8 +126,9 @@ end
 
 ---Builds the target
 ---@async
+---@param forTesting boolean|nil
 ---@return number
-function M.build()
+function M.build(forTesting)
   project.current_project.quickfixes = nil
   build = {
     variables = {},
@@ -144,7 +145,7 @@ function M.build()
   run_job({ "rm", "-rf", result_bundle_path })
   local cmd = {
     "xcodebuild",
-    "build",
+    forTesting and "build-for-testing" or "build",
     "-scheme",
     project.current_project.scheme,
     "-destination",

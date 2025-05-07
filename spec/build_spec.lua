@@ -55,9 +55,36 @@ describe("Build logic", function()
     assert.are.same(stubbed_commands, {}, "The following commands where expected to be invoked: " .. vim.inspect(stubbed_commands))
   end)
 
-  it("parses logs without build errors", function()
-    givenProject("scheme")
-    local buildResults = [[
+  local build_settings_json = [[
+    [
+      {
+        "action" : "build",
+        "buildSettings" : {
+          "PRODUCT_BUNDLE_IDENTIFIER" : "com.product.myproduct",
+          "PRODUCT_BUNDLE_PACKAGE_TYPE" : "APPL",
+          "PRODUCT_MODULE_NAME" : "MyProduct-Folder",
+          "PRODUCT_NAME" : "MyProduct",
+          "PRODUCT_SETTINGS_PATH" : "/Users/user/MyProject-Folder/MyProduct/Info.plist",
+          "PRODUCT_TYPE" : "com.apple.product-type.application",
+          "PROFILING_CODE" : "NO",
+          "PROJECT" : "MyProject",
+          "PROJECT_DERIVED_FILE_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources",
+          "PROJECT_DIR" : "/Users/user/MyProject",
+          "PROJECT_FILE_PATH" : "/Users/user/MyProject/MyProject.xcodeproj",
+          "PROJECT_GUID" : "ad98a1d3d4fc98c1821c175190d3f",
+          "PROJECT_NAME" : "MyProject",
+          "PROJECT_TEMP_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build",
+          "PROJECT_TEMP_ROOT" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex",
+          "TARGET_BUILD_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator",
+          "WRAPPER_NAME" : "MyProduct.app",
+          "FULL_PRODUCT_NAME" : "MyProduct.app"
+        },
+        "target" : "MyProduct"
+      }
+      ]
+  ]]
+
+  local buildResults = [[
     {
       "actionTitle" : "Build \"Cantatas\"",
       "analyzerWarningCount" : 0,
@@ -100,47 +127,43 @@ describe("Build logic", function()
         }
       ]
     }
-    ]]
-    local json = [[
-    [
-      {
-        "action" : "build",
-        "buildSettings" : {
-          "PRODUCT_BUNDLE_IDENTIFIER" : "com.product.myproduct",
-          "PRODUCT_BUNDLE_PACKAGE_TYPE" : "APPL",
-          "PRODUCT_MODULE_NAME" : "MyProduct-Folder",
-          "PRODUCT_NAME" : "MyProduct",
-          "PRODUCT_SETTINGS_PATH" : "/Users/user/MyProject-Folder/MyProduct/Info.plist",
-          "PRODUCT_TYPE" : "com.apple.product-type.application",
-          "PROFILING_CODE" : "NO",
-          "PROJECT" : "MyProject",
-          "PROJECT_DERIVED_FILE_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources",
-          "PROJECT_DIR" : "/Users/user/MyProject",
-          "PROJECT_FILE_PATH" : "/Users/user/MyProject/MyProject.xcodeproj",
-          "PROJECT_GUID" : "ad98a1d3d4fc98c1821c175190d3f",
-          "PROJECT_NAME" : "MyProject",
-          "PROJECT_TEMP_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build",
-          "PROJECT_TEMP_ROOT" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex",
-          "TARGET_BUILD_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator",
-          "WRAPPER_NAME" : "MyProduct.app",
-          "FULL_PRODUCT_NAME" : "MyProduct.app"
-        },
-        "target" : "MyProduct"
-      }
-      ]
-      ]]
-
+  ]]
+  local function given_remove_build_result()
     stub_external_cmd(0, { "rm", "-rf", "/cwd/.neoxcd/build.xcresult" }, "")
+  end
+
+  ---@param result? string
+  local function given_build_settings(result)
     stub_external_cmd(0, {
       "xcodebuild",
       "build",
       "-scheme",
-      "scheme",
+      project.current_project.scheme,
       "-showBuildSettings",
       "-json",
       "-destination",
       "id=" .. project.current_project.destination.id,
-    }, json)
+    }, result or build_settings_json)
+  end
+
+  ---@param results? string
+  local function given_results(results)
+    -- xcrun xcresulttool get build-results --path results.xcresult
+    stub_external_cmd(0, {
+      "xcrun",
+      "xcresulttool",
+      "get",
+      "build-results",
+      "--path",
+      "/cwd/.neoxcd/build.xcresult",
+    }, results or buildResults)
+  end
+
+  it("parses logs without build errors", function()
+    givenProject("scheme")
+
+    given_remove_build_result()
+    given_build_settings(build_settings_json)
     stub_external_cmd(0, {
       "xcodebuild",
       "build",
@@ -155,15 +178,7 @@ describe("Build logic", function()
       "-project",
       "/Users/user/MyProject/MyProject.xcodeproj",
     }, "")
-    -- xcrun xcresulttool get build-results --path results.xcresult
-    stub_external_cmd(0, {
-      "xcrun",
-      "xcresulttool",
-      "get",
-      "build-results",
-      "--path",
-      "/cwd/.neoxcd/build.xcresult",
-    }, buildResults)
+    given_results(buildResults)
 
     ---@type QuickfixEntry[]
     local expected = {
@@ -206,45 +221,8 @@ describe("Build logic", function()
 
   it("Parses the project settings", function()
     givenProject("scheme")
-    local json = [[
-[
-  {
-    "action" : "build",
-    "buildSettings" : {
-      "PRODUCT_BUNDLE_IDENTIFIER" : "com.product.myproduct",
-      "PRODUCT_BUNDLE_PACKAGE_TYPE" : "APPL",
-      "PRODUCT_MODULE_NAME" : "MyProduct-Folder",
-      "PRODUCT_NAME" : "MyProduct",
-      "PRODUCT_SETTINGS_PATH" : "/Users/user/MyProject-Folder/MyProduct/Info.plist",
-      "PRODUCT_TYPE" : "com.apple.product-type.application",
-      "PROFILING_CODE" : "NO",
-      "PROJECT" : "MyProject",
-      "PROJECT_DERIVED_FILE_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build/DerivedSources",
-      "PROJECT_DIR" : "/Users/user/MyProject",
-      "PROJECT_FILE_PATH" : "/Users/user/MyProject/MyProject.xcodeproj",
-      "PROJECT_GUID" : "ad98a1d3d4fc98c1821c175190d3f",
-      "PROJECT_NAME" : "MyProject",
-      "PROJECT_TEMP_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex/MyProject.build",
-      "PROJECT_TEMP_ROOT" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Intermediates.noindex",
-      "TARGET_BUILD_DIR" : "/Users/user/Library/Developer/Xcode/DerivedData/MyProject-ajwpsjchvdfqfzgtlxruzmeqaxwl/Build/Products/Debug-iphonesimulator",
-      "WRAPPER_NAME" : "MyProduct.app",
-      "FULL_PRODUCT_NAME" : "MyProduct.app"
-    },
-    "target" : "MyProduct"
-  }
-]
-      ]]
 
-    stub_external_cmd(0, {
-      "xcodebuild",
-      "build",
-      "-scheme",
-      "scheme",
-      "-showBuildSettings",
-      "-json",
-      "-destination",
-      "id=" .. project.current_project.destination.id,
-    }, json)
+    given_build_settings(build_settings_json)
 
     assert.are.same(0, sut.load_build_settings())
     assert.are.same("/Users/user/MyProject/MyProject.xcodeproj", project.current_project.path)
@@ -279,5 +257,29 @@ describe("Build logic", function()
     assert.is_nil(project.current_project.quickfixes)
     assert.is_nil(project.current_project.build_settings)
     assert.is_nil(project.current_target)
+  end)
+
+  it("Can build for testing", function()
+    givenProject("scheme")
+
+    given_remove_build_result()
+    given_build_settings(build_settings_json)
+    stub_external_cmd(0, {
+      "xcodebuild",
+      "build-for-testing",
+      "-scheme",
+      "scheme",
+      "-destination",
+      "id=" .. project.current_project.destination.id,
+      "-configuration",
+      "Debug",
+      "-resultBundlePath",
+      "/cwd/.neoxcd/build.xcresult",
+      "-project",
+      "/Users/user/MyProject/MyProject.xcodeproj",
+    }, "")
+    given_results(buildResults)
+
+    assert.are.same(project.ProjectResult.SUCCESS, sut.build(true))
   end)
 end)
