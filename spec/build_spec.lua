@@ -33,9 +33,10 @@ describe("Build logic", function()
   end
 
   ---@param scheme string
-  local function givenProject(scheme)
+  ---@param path? string
+  local function givenProject(scheme, path)
     project.current_project = {
-      path = "/path/project.xcodeproj",
+      path = path or "/path/project.xcodeproj",
       type = "project",
       schemes = { scheme },
       scheme = scheme,
@@ -148,7 +149,7 @@ describe("Build logic", function()
 
   ---@param results? string
   local function given_results(results)
-    -- xcrun xcresulttool get build-results --path results.xcresult
+    -- xcrun xcresulttool get build-results --pparses logs without build errorsath results.xcresult
     stub_external_cmd(0, {
       "xcrun",
       "xcresulttool",
@@ -160,7 +161,7 @@ describe("Build logic", function()
   end
 
   it("parses logs without build errors", function()
-    givenProject("scheme")
+    givenProject("scheme", "/not/overwritten/project/project.xcodeproj")
 
     given_remove_build_result()
     given_build_settings(build_settings_json)
@@ -176,7 +177,7 @@ describe("Build logic", function()
       "-resultBundlePath",
       "/cwd/.neoxcd/build.xcresult",
       "-project",
-      "/Users/user/MyProject/MyProject.xcodeproj",
+      project.current_project.path,
     }, "")
     given_results(buildResults)
 
@@ -207,7 +208,7 @@ describe("Build logic", function()
 
     assert.are.same(project.ProjectResult.SUCCESS, sut.build())
     assert.are.same(expected, project.current_project.quickfixes)
-    assert.are.same("/Users/user/MyProject/MyProject.xcodeproj", project.current_project.path)
+    assert.are.same("/not/overwritten/project/project.xcodeproj", project.current_project.path)
     assert.are.same("MyProject", project.current_project.name)
     assert.are.same("MyProduct", project.current_target.name)
     assert.are.same("com.product.myproduct", project.current_target.bundle_id)
@@ -220,12 +221,12 @@ describe("Build logic", function()
   end)
 
   it("Parses the project settings", function()
-    givenProject("scheme")
+    givenProject("scheme", "/not/overwritten/project/project.xcodeproj")
 
     given_build_settings(build_settings_json)
 
     assert.are.same(0, sut.load_build_settings())
-    assert.are.same("/Users/user/MyProject/MyProject.xcodeproj", project.current_project.path)
+    assert.are.same("/not/overwritten/project/project.xcodeproj", project.current_project.path)
     assert.are.same("MyProject", project.current_project.name)
     assert.are.same("MyProduct", project.current_target.name)
     assert.are.same("com.product.myproduct", project.current_target.bundle_id)
@@ -276,7 +277,7 @@ describe("Build logic", function()
       "-resultBundlePath",
       "/cwd/.neoxcd/build.xcresult",
       "-project",
-      "/Users/user/MyProject/MyProject.xcodeproj",
+      "/path/project.xcodeproj",
     }, "")
     given_results(buildResults)
 

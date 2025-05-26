@@ -82,10 +82,15 @@ local function update_build_target()
   if variables == nil then
     return
   end
-  if variables.PROJECT and variables.PROJECT_FILE_PATH then
+  if variables.PROJECT then
     project.current_project.name = variables.PROJECT
+  end
+
+  -- only overwrite the path if it is not already set (will be parsed from root folder)
+  if project.current_project.path == nil and variables.PROJECT_FILE_PATH then
     project.current_project.path = variables.PROJECT_FILE_PATH
   end
+
   if
     variables.PRODUCT_NAME
     and variables.PRODUCT_BUNDLE_IDENTIFIER
