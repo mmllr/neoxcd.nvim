@@ -142,8 +142,10 @@ describe("Build logic", function()
       project.current_project.scheme,
       "-showBuildSettings",
       "-json",
-      "-destination",
-      "id=" .. project.current_project.destination.id,
+      "-sdk",
+      types.get_sdk(project.current_project.destination.platform),
+      "-project",
+      project.current_project.path,
     }, result or build_settings_json)
   end
 

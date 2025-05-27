@@ -173,6 +173,9 @@ function M.build(forTesting)
   if result.code == project.ProjectResult.SUCCESS and result.stdout then
     parse_build_results(result.stdout)
   end
+
+  -- nio.scheduler()
+  -- util.write_file(util.get_cwd() .. "/.neoxcd/build.log", build.log and table.concat(build.log, "\n") or "")
   return build_result.code
 end
 
@@ -219,9 +222,10 @@ function M.load_build_settings() -- TODO: this might be a local function
     project.current_project.scheme,
     "-showBuildSettings",
     "-json",
-    "-destination",
-    "id=" .. project.current_project.destination.id,
+    "-sdk",
+    types.get_sdk(project.current_project.destination.platform),
   }
+  project.append_options_if_needed(cmd, project.current_project)
   local result = nio.wrap(util.run_job, 3)(cmd)
   if result.code == project.ProjectResult.SUCCESS and result.stdout then
     project.current_project.build_settings = parse_settings(result.stdout)

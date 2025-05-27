@@ -180,4 +180,30 @@ M.ProjectConstants = {
 ---@field details? string
 ---@field children? TestNode[]
 
+---@param platform Platform
+function M.get_sdk(platform)
+  if platform == M.Platform.IOS_DEVICE then
+    return "iphoneos"
+  elseif platform == M.Platform.IOS_SIMULATOR then
+    return "iphonesimulator"
+  elseif platform == M.Platform.TVOS_SIMULATOR then
+    return "appletvsimulator"
+  elseif platform == M.Platform.TVOS_DEVICE then
+    return "appletvos"
+  elseif platform == M.Platform.WATCHOS_SIMULATOR then
+    return "watchsimulator"
+  elseif platform == M.Platform.WATCHOS_DEVICE then
+    return "watchos"
+  elseif platform == M.Platform.VISIONOS_SIMULATOR then
+    return "xrsimulator"
+  elseif platform == M.Platform.VISIONOS_DEVICE then
+    return "xros"
+  elseif platform == M.Platform.MACOS then
+    return "macosx"
+  end
+
+  assert(false, "Unknown platform: " .. platform)
+  return ""
+end
+
 return M
