@@ -284,6 +284,23 @@ function M.load_schemes()
   return result.code
 end
 
+---@async
+---@return string[]
+local function local_package_schemes()
+  local schemes = {}
+  local result = cmd({ "find", ".", "-type", "f", "-name", "*.xcscheme", "-path", "*/.swiftpm/*" }, nil)
+  if result.code == 0 and result.stdout ~= nil then
+    local lines = vim.split(result.stdout, "[\r]?\n", { trimempty = true })
+    for _, line in ipairs(lines) do
+      local scheme = line:match("([^/]+)%.xcscheme$")
+      if scheme ~= nil then
+        table.insert(schemes, scheme)
+      end
+    end
+  end
+  return schemes
+end
+
 ---selects a scheme
 ---@async
 ---@param scheme string
@@ -295,7 +312,8 @@ function M.select_scheme(scheme)
   elseif p.schemes == nil and not vim.list_contains(p.schemes, scheme) then
     return M.ProjectResult.NO_SCHEME
   end
-  if p.scheme == scheme or p.type == "package" then
+  local package_schemes = local_package_schemes()
+  if p.scheme == scheme or p.type == "package" or vim.list_contains(package_schemes, scheme) then
     M.current_project.scheme = scheme
     vim.g.neoxcd_scheme = scheme
     return M.ProjectResult.SUCCESS

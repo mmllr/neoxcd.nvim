@@ -186,41 +186,52 @@ describe("neoxcd plugin", function()
     describe("Scheme selection", function()
       before_each(function()
         vim.g.neoxcd_scheme = nil
-        givenProject("project", "SchemeA", { "SchemeA", "SchemeB", "SchemeC" })
-        stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "schemeB", "-project", "project.xcodeproj" }, "")
+        givenProject("project", "SchemeA", { "SchemeA", "SchemeB", "SchemeC", "SchemeD" })
+        local packages = [[
+./local-package/.swiftpm/xcode/xcshareddata/xcschemes/SchemeD.xcscheme
+./local-package/.swiftpm/xcode/xcshareddata/xcschemes/SchemeC.xcscheme
+]]
+        stub_external_cmd(0, { "find", ".", "-type", "f", "-name", "*.xcscheme", "-path", "*/.swiftpm/*" }, packages)
       end)
 
       it("will update the scheme in the project", function()
-        assert.are.same(sut.ProjectResult.SUCCESS, sut.select_scheme("schemeB"))
-        assert.are.same("schemeB", sut.current_project.scheme)
-        assert.are.same("schemeB", vim.g.neoxcd_scheme)
+        stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "SchemeB", "-project", "project.xcodeproj" }, "")
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.select_scheme("SchemeB"))
+        assert.are.same("SchemeB", sut.current_project.scheme)
+        assert.are.same("SchemeB", vim.g.neoxcd_scheme)
       end)
 
       it("will write the selected scheme to the neoxcd folder", function()
-        assert.are.same(sut.ProjectResult.SUCCESS, sut.select_scheme("schemeB"))
+        stub_external_cmd(0, { "xcode-build-server", "config", "-scheme", "SchemeB", "-project", "project.xcodeproj" }, "")
+        assert.are.same(sut.ProjectResult.SUCCESS, sut.select_scheme("SchemeB"))
         assert.are.same({
           type = "project",
           path = "project.xcodeproj",
-          scheme = "schemeB",
-          schemes = { "SchemeA", "SchemeB", "SchemeC" },
+          scheme = "SchemeB",
+          schemes = { "SchemeA", "SchemeB", "SchemeC", "SchemeD" },
         }, vim.json.decode(written_files["/path/cwd/.neoxcd/project.json"]))
       end)
-    end)
 
-    it("Will not update the xcode build server when selecting the same scheme", function()
-      givenProject("project", "schemeA", { "schemeA", "SchemeB", "schemeC" })
-      local result = sut.select_scheme("schemeA")
+      it("Will not update the xcode build server when selecting the same scheme", function()
+        givenProject("project", "SchemeA", { "SchemeA", "SchemeB", "schemeC" })
+        local result = sut.select_scheme("SchemeA")
 
-      assert.are.same(sut.ProjectResult.SUCCESS, result)
-      assert.are.same("schemeA", sut.current_project.scheme)
-    end)
+        assert.are.same(sut.ProjectResult.SUCCESS, result)
+        assert.are.same("SchemeA", sut.current_project.scheme)
+      end)
 
-    it("Will not update the xcode build server for Swift packages", function()
-      givenProject("package", nil, { "schemeA", "SchemeB", "schemeC" })
-      local result = sut.select_scheme("schemeA")
+      it("Will not update the xcode build server for Swift packages", function()
+        givenProject("package", nil, { "schemeA", "SchemeB", "schemeC" })
+        local result = sut.select_scheme("schemeA")
 
-      assert.are.same(sut.ProjectResult.SUCCESS, result)
-      assert.are.same("schemeA", sut.current_project.scheme)
+        assert.are.same(sut.ProjectResult.SUCCESS, result)
+        assert.are.same("schemeA", sut.current_project.scheme)
+      end)
+
+      it("Will not update the xcode build server when selecting a scheme from a local swift package", function()
+        sut.select_scheme("SchemeD")
+        assert.are.same("SchemeD", sut.current_project.scheme)
+      end)
     end)
   end)
 
@@ -401,6 +412,7 @@ describe("neoxcd plugin", function()
 
     givenProject("project", "testScheme")
     stub_external_cmd(0, { "xcodebuild", "-showdestinations", "-scheme", "testScheme", "-quiet", "-project", "project.xcodeproj" }, output)
+    stub_external_cmd(0, { "find", ".", "-type", "f", "-name", "*.xcscheme", "-path", "*/.swiftpm/*" }, "")
 
     local destinations = {
       {
