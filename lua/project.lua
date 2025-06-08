@@ -866,7 +866,7 @@ end
 
 ---Updates a buffer with test results
 ---@async @param buf integer
-M.update_test_results = function(buf)
+function M.update_test_results(buf)
   local results = M.current_project.test_results
   if results == nil or #results == 0 then
     return
