@@ -443,7 +443,6 @@ end
 ---@param program string
 local function ios_dap_config(program)
   return {
-    {
       name = "iOS App Debugger",
       type = "lldb",
       request = "attach",
@@ -451,7 +450,6 @@ local function ios_dap_config(program)
       cwd = "${workspaceFolder}",
       stopOnEntry = false,
       waitFor = true,
-    },
   }
 end
 
