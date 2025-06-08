@@ -441,15 +441,16 @@ function M.run()
 end
 
 ---@param program string
+---@return dap.Configuration
 local function ios_dap_config(program)
   return {
-      name = "iOS App Debugger",
-      type = "lldb",
-      request = "attach",
-      program = program,
-      cwd = "${workspaceFolder}",
-      stopOnEntry = false,
-      waitFor = true,
+    name = "iOS App Debugger",
+    type = "codelldb",
+    request = "attach",
+    program = program,
+    cwd = "${workspaceFolder}",
+    stopOnEntry = false,
+    waitFor = true,
   }
 end
 
