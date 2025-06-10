@@ -594,15 +594,13 @@ describe("neoxcd plugin", function()
       assert.are.same(sut.ProjectResult.SUCCESS, sut.debug())
 
       assert.are.same({
-        {
-          name = "iOS App Debugger",
-          type = "lldb",
-          request = "attach",
-          program = "/path/to/build/TestApp.app",
-          cwd = "${workspaceFolder}",
-          stopOnEntry = false,
-          waitFor = true,
-        },
+        name = "iOS App Debugger",
+        type = "codelldb",
+        request = "attach",
+        program = "/path/to/build/TestApp.app",
+        cwd = "${workspaceFolder}",
+        stopOnEntry = false,
+        waitFor = true,
       }, stubbed_dap)
     end)
   end)
