@@ -28,13 +28,14 @@ end
 ---@param cmd string[]
 ---@param on_stdout fun(err: string?, data: string?)|nil
 ---@param on_exit fun(obj: vim.SystemCompleted)
+---@return vim.SystemObj|nil
 function M.run_job(cmd, on_stdout, on_exit)
   -- print("Running command: " .. table.concat(cmd, " "))
   if M.options.run_cmd ~= nil and type(M.options.run_cmd) == "function" then
     M.options.run_cmd(cmd, on_stdout, on_exit)
-    return
+    return nil
   end
-  vim.system(cmd, {
+  return vim.system(cmd, {
     text = true,
     stdout = on_stdout or true,
   }, on_exit)
