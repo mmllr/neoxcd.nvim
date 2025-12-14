@@ -1,7 +1,7 @@
 local nio = require("nio")
 
 ---@class UtilOpts
----@field run_cmd? fun(cmd: string[], on_stdout: fun(error: string?, data: string?)|nil, on_exit: fun(obj: vim.SystemCompleted))
+---@field run_cmd? fun(cmd: string[], on_stdout: fun(error: string?, data: string?)|nil, on_stderr: fun(error: string?, data: string?)|nil, on_exit: fun(obj: vim.SystemCompleted))
 ---@field run_dap? fun(config: dap.Configuration)
 ---@field read_file? async fun(path: string): string?
 ---@field write_file? async fun(path: string, contents: string): boolean
@@ -12,7 +12,7 @@ local M = {
 }
 
 ---@class ExternalCommand
----@dfield execute fun(cmd: string[], on_exit: fun(code: number), on_stdout: fun(error: string, data: string))
+---@field execute fun(cmd: string[], on_exit: fun(code: number), on_stdout: fun(error: string, data: string))
 
 ---Find files with a specific extension in a directory
 ---@param extension string
@@ -27,17 +27,19 @@ end
 ---Helper for executing external commands
 ---@param cmd string[]
 ---@param on_stdout fun(err: string?, data: string?)|nil
+---@param on_stderr fun(err: string?, data: string?)|nil
 ---@param on_exit fun(obj: vim.SystemCompleted)
 ---@return vim.SystemObj|nil
-function M.run_job(cmd, on_stdout, on_exit)
+function M.run_job(cmd, on_stdout, on_stderr, on_exit)
   -- print("Running command: " .. table.concat(cmd, " "))
   if M.options.run_cmd ~= nil and type(M.options.run_cmd) == "function" then
-    M.options.run_cmd(cmd, on_stdout, on_exit)
+    M.options.run_cmd(cmd, on_stdout, on_stderr, on_exit)
     return nil
   end
   return vim.system(cmd, {
     text = true,
     stdout = on_stdout or true,
+    stderr = on_stderr or true,
   }, on_exit)
 end
 

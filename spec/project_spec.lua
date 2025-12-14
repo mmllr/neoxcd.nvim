@@ -75,7 +75,7 @@ describe("neoxcd plugin", function()
   ---@param stubbed_cmd string[]
   ---@param output string
   local function stub_external_cmd(code, stubbed_cmd, output)
-    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = false }
+    stubbed_commands[table.concat(stubbed_cmd, " ")] = { code = code, output = output, use_on_stdout = false, error = nil }
   end
 
   describe("Scheme handling", function()

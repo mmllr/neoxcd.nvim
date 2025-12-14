@@ -126,7 +126,7 @@ local function run_build(cmd, callback)
         add_build_log(line)
       end
     end
-  end, callback)
+  end, nil, callback)
 end
 
 ---Builds the target
@@ -144,7 +144,7 @@ function M.build(forTesting)
     return result
   end
 
-  local run_job = nio.wrap(util.run_job, 3)
+  local run_job = nio.wrap(util.run_job, 4)
   nio.scheduler()
   local result_bundle_path = util.get_cwd() .. "/.neoxcd/build.xcresult"
   run_job({ "rm", "-rf", result_bundle_path })
@@ -226,7 +226,7 @@ function M.load_build_settings() -- TODO: this might be a local function
     types.get_sdk(project.current_project.destination.platform),
   }
   project.append_options_if_needed(cmd, project.current_project)
-  local result = nio.wrap(util.run_job, 3)(cmd)
+  local result = nio.wrap(util.run_job, 4)(cmd)
   if result.code == project.ProjectResult.SUCCESS and result.stdout then
     project.current_project.build_settings = parse_settings(result.stdout)
     update_build_target()

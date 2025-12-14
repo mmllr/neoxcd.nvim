@@ -314,7 +314,7 @@ local function find_symbol(symbol, parent)
   else
     table.insert(cmd, "func\\s+" .. test_name)
   end
-  local ripgrep = nio.wrap(util.run_job, 3)
+  local ripgrep = nio.wrap(util.run_job, 4)
   local result = ripgrep(cmd, nil)
 
   if result.code == 0 and result.stdout then

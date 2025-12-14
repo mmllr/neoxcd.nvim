@@ -49,7 +49,7 @@ M.ProjectResult = {
 local destinations = {}
 local diagnosticsNamespace = vim.api.nvim_create_namespace("neoxcd-diagnostics")
 
-local cmd = nio.wrap(util.run_job, 3)
+local cmd = nio.wrap(util.run_job, 4)
 
 ---Parse the output of `xcodebuild -list -json` into a table of schemes
 ---@param input string
@@ -276,7 +276,7 @@ function M.load_schemes()
     return M.ProjectResult.NO_PROJECT
   end
   local opts = M.build_options_for_project(p)
-  local result = nio.wrap(util.run_job, 3)(util.concat({ "xcodebuild", "-list", "-json" }, opts), nil)
+  local result = nio.wrap(util.run_job, 4)(util.concat({ "xcodebuild", "-list", "-json" }, opts), nil)
   if result.code == 0 and result.stdout ~= nil then
     M.current_project.schemes = parse_schemes(result.stdout)
     save_project()

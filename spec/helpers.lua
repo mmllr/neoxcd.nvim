@@ -4,13 +4,14 @@ local assert = require("luassert")
 ---@field output string
 ---@field code integer|integer[]
 ---@field use_on_stdout boolean
+---@field error? string
 
 return {
   ---Returns a cmd function that can be used to stub commands
   ---@param stubbed_commands table<string, StubbedCommand>
-  ---@return fun(cmd: string[], on_stdout: fun(error: string?, data: string?)|nil, on_exit: fun(obj: vim.SystemCompleted))
+  ---@return fun(cmd: string[], on_stdout: fun(error: string?, data: string?)|nil, on_stderr: fun(error: string?, data: string?)|nil, on_exit: fun(obj: vim.SystemCompleted))
   setup_run_cmd = function(stubbed_commands)
-    return function(cmd, on_stdout, on_exit)
+    return function(cmd, on_stdout, on_stderr, on_exit)
       local key = table.concat(cmd, " ")
       assert.is.is_not_nil(stubbed_commands[key], "Expected to find\n" .. key .. "\nin stubbed commands")
       if stubbed_commands[key].use_on_stdout then
@@ -31,6 +32,9 @@ return {
         else
           error("Command " .. key .. " has no more codes to return")
         end
+      end
+      if stubbed_commands[key].error ~= nil then
+        on_stderr(stubbed_commands[key].error, nil)
       end
       on_exit({
         signal = 0,

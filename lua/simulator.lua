@@ -30,7 +30,7 @@ M.SimulatorResult = {
   SIM_CTL_ERROR = 149,
 }
 
-local cmd = nio.wrap(util.run_job, 3)
+local cmd = nio.wrap(util.run_job, 4)
 
 ---Opens the Simulator app
 ---@async
