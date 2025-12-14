@@ -20,13 +20,13 @@ local select_schemes = function()
   end
   if #project.current_project.schemes == 0 then
     spinner.start("Loading schemes...")
-    local result = project.load_schemes()
+    local result, error = project.load_schemes()
 
     nio.scheduler()
     spinner.stop()
     local schemes = project.current_project.schemes
     if result ~= 0 or #schemes == 0 then
-      vim.notify("No schemes found", vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
+      vim.notify("No schemes found\nError: " .. vim.inspect(error), vim.log.levels.ERROR, { id = "Neoxcd", title = "Neoxcd" })
       return
     end
   end

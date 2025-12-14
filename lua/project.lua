@@ -270,6 +270,7 @@ end
 ---Load the schemes for the current project
 ---@async
 ---@return ProjectResultCode
+---@return string? stderr
 function M.load_schemes()
   local p = M.current_project
   if not p then
@@ -281,7 +282,7 @@ function M.load_schemes()
     M.current_project.schemes = parse_schemes(result.stdout)
     save_project()
   end
-  return result.code
+  return result.code, result.stderr
 end
 
 ---@async
